@@ -51,10 +51,10 @@ class Observation:
     Dataclass representing a game observation.
     Can contain multiple types of observations:
     - img_path: Path to the image file for visual observations.
-    - game_trajectory: Memory module — past N turns in the game trajectory, each turn contains (state, action, reward).
-    - reflection: Memory module — Textual reflection from the game trajectory.
-    - textual_representation: Perception module — Textual representation of the game state (read from game)
-    - processed_visual_description: Perception module — Textual description of the image (extracted and processed from image)
+    - game_trajectory: Memory module - past N turns in the game trajectory, each turn contains (state, action, reward).
+    - reflection: Memory module - Textual reflection from the game trajectory.
+    - textual_representation: Perception module - Textual representation of the game state (read from game)
+    - processed_visual_description: Perception module - Textual description of the image (extracted and processed from image)
     """
 
     BASE_ATTR = {
@@ -220,7 +220,9 @@ class Observation:
         """
         formatter = string.Formatter()
         var_names = [fld for _, fld, _, _ in formatter.parse(prompt_template) if fld]
-        assert var_names, "Expected at least one variable in prompt_template."
+        if not var_names:
+            print(f"Warning: No variables found in prompt_template: {prompt_template[:100]}...")
+            return prompt_template  # Return template as-is if no variables
 
         # Collect values for referenced attributes (initialize with "N/A")
         harness_content_map = {name: "N/A" for name in var_names}

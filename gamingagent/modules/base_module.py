@@ -120,7 +120,7 @@ class BaseModule(CoreModule):
             user_prompt = context
 
         print(f"""
------------------------- VISION API — FINAL USER PROMPT ------------------------
+------------------------ VISION API - FINAL USER PROMPT ------------------------
 {user_prompt}
 ------------------------ END FINAL USER PROMPT ------------------------
 """)
