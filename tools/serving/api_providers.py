@@ -13,7 +13,10 @@ from google.generativeai import types
 import google.api_core.exceptions
 from together import Together
 
-from zai import ZaiClient
+try:
+    from zai import ZaiClient
+except ImportError:
+    ZaiClient = None
 
 
 
