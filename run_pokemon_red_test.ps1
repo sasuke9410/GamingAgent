@@ -4,7 +4,7 @@
 param(
     [int]$MaxSteps = 5,
     [string]$ObservationMode = "vision",
-    [int]$TokenLimit = 2000
+    [int]$TokenLimit = 1500
 )
 
 Write-Host ""

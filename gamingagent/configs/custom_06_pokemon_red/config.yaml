@@ -3,16 +3,16 @@ game_env:
   description: "Pokemon Red game environment via Pokemon Red Gymnasium"
   env_type: "custom"
   render_mode: "human"  # Use "human" to watch, "rgb_array" for vision agent processing
-  max_steps: 50000          # Max steps per Tetris game episode
+  max_steps: 50000          # Max steps per Pokemon Red episode
   seed: 42             # Set a specific seed for reproducibility, e.g., 42, or null for random
-  num_runs: 3               # Number of game episodes to run
+  num_runs: 1               # Number of game episodes to run (test)
 
 agent:
   name: "pokemon_red_agent"
   model_name: "gemini-2.0-flash" # Or your preferred model like gemini-2.0-flash
   cache_dir: "cache/pokemon_red" # Base cache directory for this agent/game
   reasoning_effort: "high" # Example, if your agent uses this
-  token_limit: 3000        # Conservative setting for stability
+  token_limit: 1500        # Conservative setting for 4096 token context limit
   harness: true        # Enable harness mode to use perception/reasoning modules
   observation_mode: "vision"  # Vision only for stability
   use_reflection: false    # Disabled for initial stability
@@ -23,7 +23,7 @@ agent:
     base_module:
     
     memory_module:
-      max_memory: 10
+      max_memory: 3
 
     perception_module:
 
