@@ -734,6 +734,87 @@ class PokemonRedReader:
     def __init__(self, memory_view):
         """Initialize with a PyBoy memory view object"""
         self.memory = memory_view
+        self._rom_language = None  # Will be detected on first use
+        self._init_japanese_character_tables()
+
+    def _init_japanese_character_tables(self):
+        """Initialize Japanese character mapping tables"""
+        # Katakana characters (0x80-0x9F)
+        self._katakana_table = {
+            0x80: 'ア', 0x81: 'イ', 0x82: 'ウ', 0x83: 'エ', 0x84: 'オ',
+            0x85: 'カ', 0x86: 'キ', 0x87: 'ク', 0x88: 'ケ', 0x89: 'コ',
+            0x8A: 'サ', 0x8B: 'シ', 0x8C: 'ス', 0x8D: 'セ', 0x8E: 'ソ',
+            0x8F: 'タ', 0x90: 'チ', 0x91: 'ツ', 0x92: 'テ', 0x93: 'ト',
+            0x94: 'ナ', 0x95: 'ニ', 0x96: 'ヌ', 0x97: 'ネ', 0x98: 'ノ',
+            0x99: 'ハ', 0x9A: 'ヒ', 0x9B: 'フ', 0x9C: 'ヘ', 0x9D: 'ホ',
+            0x9E: 'マ', 0x9F: 'ミ'
+        }
+
+        # Hiragana characters (0xA0-0xBF)
+        self._hiragana_table = {
+            0xA0: 'あ', 0xA1: 'い', 0xA2: 'う', 0xA3: 'え', 0xA4: 'お',
+            0xA5: 'か', 0xA6: 'き', 0xA7: 'く', 0xA8: 'け', 0xA9: 'こ',
+            0xAA: 'さ', 0xAB: 'し', 0xAC: 'す', 0xAD: 'せ', 0xAE: 'そ',
+            0xAF: 'た', 0xB0: 'ち', 0xB1: 'つ', 0xB2: 'て', 0xB3: 'と',
+            0xB4: 'な', 0xB5: 'に', 0xB6: 'ぬ', 0xB7: 'ね', 0xB8: 'の',
+            0xB9: 'は', 0xBA: 'ひ', 0xBB: 'ふ', 0xBC: 'へ', 0xBD: 'ほ',
+            0xBE: 'ま', 0xBF: 'み'
+        }
+
+        # Extended characters (more katakana/hiragana and special chars)
+        self._extended_japanese_table = {
+            # 0xC0-0xDF range: remaining hiragana/katakana
+            0xC0: 'む', 0xC1: 'め', 0xC2: 'も', 0xC3: 'や', 0xC4: 'ゆ', 0xC5: 'よ',
+            0xC6: 'ら', 0xC7: 'り', 0xC8: 'る', 0xC9: 'れ', 0xCA: 'ろ',
+            0xCB: 'わ', 0xCC: 'ゐ', 0xCD: 'ゑ', 0xCE: 'を', 0xCF: 'ん',
+            0xD0: 'ム', 0xD1: 'メ', 0xD2: 'モ', 0xD3: 'ヤ', 0xD4: 'ユ', 0xD5: 'ヨ',
+            0xD6: 'ラ', 0xD7: 'リ', 0xD8: 'ル', 0xD9: 'レ', 0xDA: 'ロ',
+            0xDB: 'ワ', 0xDC: 'ヰ', 0xDD: 'ヱ', 0xDE: 'ヲ', 0xDF: 'ン',
+
+            # 0x9A-0x9F range: Special symbols in Japanese ROM
+            0x9C: 'ー',  # Long vowel mark (chouon)
+
+            # Special characters
+            0x7F: ' ',   # Space
+            0x4E: '\n',  # Line break
+            0x50: '',    # End marker
+            0xE1: 'ポ',  # PokE
+            0xE2: 'ケ',  # moN
+        }
+
+    def _detect_rom_language(self) -> str:
+        """Detect if ROM is Japanese or English by checking character patterns"""
+        if self._rom_language is not None:
+            return self._rom_language
+
+        # Check a known text area for Japanese characters
+        # Player name area often contains recognizable patterns
+        sample_bytes = self.memory[0xD158:0xD163]  # Player name area
+
+        japanese_char_count = 0
+        english_char_count = 0
+
+        for b in sample_bytes:
+            if b == 0x50:  # End marker
+                break
+            # Japanese character ranges
+            if (0x80 <= b <= 0x9F) or (0xA0 <= b <= 0xDF):
+                # In Japanese ROM, these are Japanese chars
+                # In English ROM, 0x80-0x99 = A-Z, 0xA0-0xB9 = a-z
+                if b in self._katakana_table or b in self._hiragana_table or b in self._extended_japanese_table:
+                    japanese_char_count += 1
+            elif (0x80 <= b <= 0x99) or (0xA0 <= b <= 0xB9):
+                # Likely English characters
+                english_char_count += 1
+
+        # Make educated guess based on character patterns
+        # Also check if we see obvious English patterns like consecutive ASCII-range values
+        if japanese_char_count > english_char_count:
+            self._rom_language = "japanese"
+        else:
+            self._rom_language = "english"
+
+        return self._rom_language
 
     def get_warps(self) -> list[tuple[int, int]]:
         """Get all the warps listed for the current map.
@@ -773,18 +854,54 @@ class PokemonRedReader:
         return money
 
     def _convert_text(self, bytes_data: list[int]) -> str:
-        """Convert Pokemon text format to ASCII"""
+        """Convert Pokemon text format to characters (supports both English and Japanese ROMs)"""
+        rom_language = self._detect_rom_language()
         result = ""
+
         for b in bytes_data:
             if b == 0x50:  # End marker
                 break
             elif b == 0x4E:  # Line break
                 result += "\n"
-            # Main character ranges
-            elif 0x80 <= b <= 0x99:  # A-Z
-                result += chr(b - 0x80 + ord("A"))
-            elif 0xA0 <= b <= 0xB9:  # a-z
-                result += chr(b - 0xA0 + ord("a"))
+
+            # Main character ranges - language dependent
+            elif 0x80 <= b <= 0x9F:
+                if rom_language == "japanese":
+                    # Japanese ROM: Check katakana first, then extended table
+                    if b in self._katakana_table:
+                        result += self._katakana_table[b]
+                    elif b in self._extended_japanese_table:
+                        result += self._extended_japanese_table[b]
+                    else:
+                        result += f"[{b:02X}]"
+                else:
+                    # English ROM: A-Z (only 0x80-0x99 range)
+                    if b <= 0x99:
+                        result += chr(b - 0x80 + ord("A"))
+                    else:
+                        result += f"[{b:02X}]"
+
+            elif 0xA0 <= b <= 0xBF:
+                if rom_language == "japanese":
+                    # Japanese ROM: Check hiragana first, then extended table
+                    if b in self._hiragana_table:
+                        result += self._hiragana_table[b]
+                    elif b in self._extended_japanese_table:
+                        result += self._extended_japanese_table[b]
+                    else:
+                        result += f"[{b:02X}]"
+                else:
+                    # English ROM: a-z (only 0xA0-0xB9 range)
+                    if b <= 0xB9:
+                        result += chr(b - 0xA0 + ord("a"))
+                    else:
+                        result += f"[{b:02X}]"
+
+            elif 0xC0 <= b <= 0xDF:
+                if rom_language == "japanese" and b in self._extended_japanese_table:
+                    result += self._extended_japanese_table[b]
+                else:
+                    result += f"[{b:02X}]"
             elif 0xF6 <= b <= 0xFF:  # Numbers 0-9
                 result += str(b - 0xF6)
             # Punctuation characters (9A-9F)
