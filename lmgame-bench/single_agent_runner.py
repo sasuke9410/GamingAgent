@@ -576,7 +576,12 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
     effective_total_perf_score = total_perf_score_for_episode
     effective_final_score_from_env = final_score_from_env
 
-    if isinstance(game_env, AceAttorneyEnv):
+    try:
+        is_ace_attorney = isinstance(game_env, AceAttorneyEnv)
+    except (TypeError, NameError):
+        is_ace_attorney = False
+
+    if is_ace_attorney:
         current_checkpoint_score = 0
         if hasattr(game_env, 'calculate_final_performance_score'):
             try:
@@ -887,7 +892,12 @@ def main():
 
     # --- Calculate and Print Ace Attorney Specific Final Score ---
     ace_attorney_checkpoint_score = None
-    if isinstance(game_env, AceAttorneyEnv):
+    try:
+        is_ace_attorney = isinstance(game_env, AceAttorneyEnv)
+    except (TypeError, NameError):
+        is_ace_attorney = False
+
+    if is_ace_attorney:
         if hasattr(game_env, 'calculate_final_performance_score'):
             try:
                 ace_attorney_checkpoint_score = game_env.calculate_final_performance_score()

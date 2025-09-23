@@ -4,7 +4,7 @@
 param(
     [int]$MaxSteps = 50000,
     [string]$ObservationMode = "vision",
-    [int]$TokenLimit = 2000,
+    [int]$TokenLimit = 1500,
     [switch]$AutoStart
 )
 

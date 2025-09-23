@@ -3,7 +3,10 @@
     "allow": [
       "Bash(uv:*)",
       "Bash(python:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(pokemon_red_start.bat)",
+      "Bash(cmd:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

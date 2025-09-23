@@ -18,6 +18,6 @@ call .venv\Scripts\activate.bat
 REM Quick test run (5 steps)
 echo Starting Pokemon Red test run (5 steps)...
 echo.
-powershell -File run_pokemon_red_test.ps1 -MaxSteps 5 -ObservationMode vision -TokenLimit 2000
+powershell -File run_pokemon_red_test.ps1 -MaxSteps 5 -ObservationMode vision -TokenLimit 1500
 
 pause
