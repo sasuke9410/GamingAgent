@@ -1,20 +1,37 @@
-# virtual env and running logs
-lmgame-bench-env/*
-logs/*
-eval/perf/*
-
-# 💾 Cache and Temporary Files
-_dummy/*
-videos/*
-cache/*
-*/cache
+# ===========================
+# Python
+# ===========================
 __pycache__/
-*/__pycache__
-*.pyc
+*/__pycache__/
+*.py[cod]
 *.pyo
 *.pyd
+*.egg-info/
+*.egg
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
 
-# 🔧 Compiled Binaries and Object Files
+# ===========================
+# Virtual Environments
+# ===========================
+.venv/
+venv/
+env/
+lmgame-bench-env/
+
+# ===========================
+# Build / Distribution
+# ===========================
+build/
+dist/
+bin/
+.pdm-build/
+
+# ===========================
+# Compiled Binaries / Objects
+# ===========================
 *.o
 *.so
 *.dll
@@ -25,48 +42,61 @@ __pycache__/
 *.lib
 *.obj
 
-# 📄 Logs and Debug Files
-*.log
-*.tmp
-*.swp
-*.swo
-
-# 📌 Build and Dependency Directories
-bin/
-build/
-dist/
-*.egg-info/
-*.manifest
-*.spec
-
-# 🏗️ Make and CMake Files
+# ===========================
+# CMake
+# ===========================
 CMakeFiles/
 CMakeCache.txt
 Makefile
 cmake_install.cmake
 
-# 🚀 Virtual Environment (Python)
-venv/
-.env/
-.venv/
-env/
-pip-log.txt
-pip-delete-this-directory.txt
+# ===========================
+# Logs / Temporary Files
+# ===========================
+*.log
+*.tmp
+*.swp
+*.swo
+logs/
 
-# 📝 IDE and Editor Specific Files
+# ===========================
+# Cache
+# ===========================
+cache/
+*/cache/
+_dummy/
+
+# ===========================
+# Evaluation Output
+# ===========================
+eval/perf/
+eval/video_samples/
+perf/
+videos/
+
+# ===========================
+# IDE / Editor
+# ===========================
 .vscode/
 .idea/
 *.iml
 
-# 🔒 OS-Specific Files
+# ===========================
+# OS
+# ===========================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# 📝 Environment Variables
+# ===========================
+# Credentials / Secrets
+# ===========================
+credentials.sh
 setup_env.sh
 
-# 🎮 ROM and Game Files
+# ===========================
+# ROM / Game Files
+# ===========================
 *.sfc
 *.nes
 *.a26
@@ -79,16 +109,39 @@ setup_env.sh
 *.bk2
 *.rom
 *.ram
+*.state
+*.sha
+*.ini
 custom_integrations/roms/
 gamingagent/configs/custom_06_pokemon_red/rom/
 gamingagent/configs/retro_02_ace_attorney/rom/
-*.state
-*.sha
 
-perf/
+# ===========================
+# Downloaded Third-Party Sources
+# ===========================
+stable-retro-*/
+*.tar.gz
 
-logs/
+# ===========================
+# Temporary Install / Build Scripts
+# ===========================
+install_*.ps1
+install_*.bat
+install_*.py
+test_cmake.ps1
 
-eval/video_samples/*
+# ===========================
+# Temporary Analysis / Log Output
+# ===========================
+*_error_log.txt
+*_install_log.txt
+*_nmake_log.txt
+install_log.txt
+install_output.txt
+pokemon_analysis_utf8.txt
+pokemon_status_analysis.txt
 
-*.ini
+# ===========================
+# Claude Code Local Settings
+# ===========================
+.claude/settings.local.json
