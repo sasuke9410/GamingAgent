@@ -180,3 +180,50 @@ print(result)
 - マルチモーダルゲーム（Pokemon Red、Super Mario Bros等）では必ずマルチモーダル対応モデルを使用
 - テキストのみゲーム（2048、Sokoban、Tetris等）では軽量なテキストモデルの使用を推奨
 - ローカルモデルの推論速度がクラウドAPIより遅い場合があるため、`token_limit`を適切に調整
+
+## 改善管理
+
+### 改善項目の管理
+プロジェクトの改善項目・課題・TODOは **`IMPROVEMENTS.md`** で一元管理しています。
+
+**主な改善項目**:
+- Pokemon Red: エージェント思考言語の統一化（優先度：高）
+- Pokemon Red: UI操作理解の強化（名前入力画面等）（優先度：高）
+- Pokemon Red: ROM制御文字のフィルタリング（優先度：中）
+- Ace Attorney: stable-retroインストール自動化（優先度：高）
+
+詳細は [`IMPROVEMENTS.md`](IMPROVEMENTS.md) を参照してください。
+
+### 改善実施時のワークフロー
+
+1. **課題発見時**:
+   ```bash
+   # IMPROVEMENTS.mdに新しい課題を追加
+   # 優先度、影響範囲、解決策を記載
+   ```
+
+2. **改善実施時**:
+   ```bash
+   # ステータスを「🟡 対応中」に更新
+   # 実装後、ステータスを「🟢 完了」に更新
+   # 実装詳細と結果を記録
+   ```
+
+3. **定期レビュー**:
+   ```bash
+   # 月次で優先度を見直し
+   # 完了項目のアーカイブ
+   ```
+
+### 分析レポート
+
+**Pokemon Red 日本語ステータス分析**:
+- 詳細レポート: `pokemon_japanese_status_report.md`
+- ステータスログ: `pokemon_status_analysis.txt`
+- 実行ログ: `cache/pokemon_red/llm_studio_qwen/{timestamp}/episode_001_log.jsonl`
+
+これらのレポートには以下が含まれます:
+- 日本語ダイアログ処理の精度評価
+- ゲームステータス取得の正確性検証
+- エージェントの認知・行動パターン分析
+- メモリモジュールの記録内容確認
