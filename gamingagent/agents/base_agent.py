@@ -164,7 +164,7 @@ class BaseAgent(ABC):
 
         if config_path and os.path.exists(config_path):
             try:
-                with open(config_path, 'r') as f:
+                with open(config_path, 'r', encoding='utf-8') as f:
                     file_config = json.load(f)
                 # Update config with file values
                 for module in config:

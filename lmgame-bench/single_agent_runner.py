@@ -14,8 +14,13 @@ import gymnasium as gym
 
 from typing import Any, Dict
 
-import retro
-from retro.enums import Actions, Observations, State # retro.data will be used directly for Integrations
+try:
+    import retro
+    from retro.enums import Actions, Observations, State # retro.data will be used directly for Integrations
+except ImportError:
+    print("Warning: retro package not available, some games may not work")
+    retro = None
+    Actions = Observations = State = None
 
 from gamingagent.agents.base_agent import BaseAgent
 from gamingagent.modules import PerceptionModule, ReasoningModule # Observation is imported by Env
@@ -28,9 +33,13 @@ from gamingagent.envs.custom_04_tetris.tetrisEnv import TetrisEnv
 from gamingagent.envs.custom_05_doom.doomEnv import DoomEnvWrapper
 from gamingagent.envs.custom_06_pokemon_red.pokemonRedEnv import PokemonRedEnv
 
-from gamingagent.envs.retro_01_super_mario_bros.superMarioBrosEnv import SuperMarioBrosEnv
-from gamingagent.envs.retro_02_ace_attorney.aceAttorneyEnv import AceAttorneyEnv
-from gamingagent.envs.retro_03_1942.NineteenFortyTwo_env import NineteenFortyTwoEnv
+try:
+    from gamingagent.envs.retro_01_super_mario_bros.superMarioBrosEnv import SuperMarioBrosEnv
+    from gamingagent.envs.retro_02_ace_attorney.aceAttorneyEnv import AceAttorneyEnv
+    from gamingagent.envs.retro_03_1942.NineteenFortyTwo_env import NineteenFortyTwoEnv
+except ImportError:
+    print("Warning: Retro game environments not available")
+    SuperMarioBrosEnv = AceAttorneyEnv = NineteenFortyTwoEnv = None
 
 from gamingagent.envs.zoo_01_tictactoe.TicTacToeEnv import SingleTicTacToeEnv
 
@@ -300,10 +309,13 @@ def create_environment(game_name_arg: str,
         )
         return env
     elif game_name_arg == "super_mario_bros":
+        if SuperMarioBrosEnv is None:
+            print(f"ERROR: SuperMarioBrosEnv not available due to missing retro dependency")
+            return None
         # SuperMarioBrosEnvWrapper loads its specific configs internally.
         # The runner primarily needs to provide paths and agent/run-level settings.
         env_wrapper_config_dir = os.path.join("gamingagent/envs", config_dir_name_for_env_cfg)
-        
+
         print(f"Initializing environment: {game_name_arg} using SuperMarioBrosEnv")
         print(f"  Wrapper config dir: {env_wrapper_config_dir}")
         print(f"  Observation mode for adapter: {obs_mode_arg}")
@@ -317,6 +329,9 @@ def create_environment(game_name_arg: str,
         )
         return env
     elif game_name_arg == "nineteen_forty_two":
+        if NineteenFortyTwoEnv is None:
+            print(f"ERROR: NineteenFortyTwoEnv not available due to missing retro dependency")
+            return None
         # NineteenFortyTwoEnvWrapper loads its specific configs internally.
         # The runner primarily needs to provide paths and agent/run-level settings.
         env_wrapper_config_dir = os.path.join("gamingagent/envs", config_dir_name_for_env_cfg)
@@ -334,6 +349,9 @@ def create_environment(game_name_arg: str,
         )
         return env
     elif game_name_arg == "ace_attorney":
+        if AceAttorneyEnv is None:
+            print(f"ERROR: AceAttorneyEnv not available due to missing retro dependency")
+            return None
         # Parameters for AceAttorneyEnv which inherits from retro.Env
         # These will be passed to AceAttorneyEnv.__init__
         # Some will directly go to retro.Env.__init__ via super() call
@@ -345,22 +363,22 @@ def create_environment(game_name_arg: str,
             # Params for retro.Env base class
             retro_init_kwargs = env_cfg_json.get('env_init_kwargs', {})
             env_params_for_constructor['game'] = retro_init_kwargs.get('retro_game_name', 'AceAttorney-GbAdvance')
-            env_params_for_constructor['state'] = retro_init_kwargs.get('retro_state_name', State.DEFAULT) # From retro.enums
+            env_params_for_constructor['state'] = retro_init_kwargs.get('retro_state_name', State.DEFAULT if State else None) # From retro.enums
             env_params_for_constructor['scenario'] = retro_init_kwargs.get('scenario') 
             env_params_for_constructor['info'] = retro_init_kwargs.get('info') 
             
             use_restricted_val = retro_init_kwargs.get('use_restricted_actions', "FILTERED") # Get the value
             if isinstance(use_restricted_val, str):
                 use_restricted_str_upper = use_restricted_val.upper()
-                if use_restricted_str_upper == "DISCRETE":
+                if Actions and use_restricted_str_upper == "DISCRETE":
                     env_params_for_constructor['use_restricted_actions'] = Actions.DISCRETE
-                elif use_restricted_str_upper == "MULTI_DISCRETE":
+                elif Actions and use_restricted_str_upper == "MULTI_DISCRETE":
                     env_params_for_constructor['use_restricted_actions'] = Actions.MULTI_DISCRETE
-                elif use_restricted_str_upper == "ALL":
+                elif Actions and use_restricted_str_upper == "ALL":
                     env_params_for_constructor['use_restricted_actions'] = Actions.ALL
                 # Default to FILTERED if string is "FILTERED" or unrecognized
-                else: 
-                    env_params_for_constructor['use_restricted_actions'] = Actions.FILTERED
+                else:
+                    env_params_for_constructor['use_restricted_actions'] = Actions.FILTERED if Actions else None
             elif isinstance(use_restricted_val, int):
                 # Pass integer directly, assuming it corresponds to retro.Actions enum values
                 env_params_for_constructor['use_restricted_actions'] = use_restricted_val
@@ -373,22 +391,22 @@ def create_environment(game_name_arg: str,
             env_params_for_constructor['players'] = retro_init_kwargs.get('players', 1)
             
             inttype_str = retro_init_kwargs.get('inttype', "ALL").upper()
-            if inttype_str == "CUSTOM":
+            if retro and inttype_str == "CUSTOM":
                     env_params_for_constructor['inttype'] = retro.data.Integrations.CUSTOM
-            elif inttype_str == "STABLE":
+            elif retro and inttype_str == "STABLE":
                     env_params_for_constructor['inttype'] = retro.data.Integrations.STABLE
-            elif inttype_str == "EXPERIMENTAL":
+            elif retro and inttype_str == "EXPERIMENTAL":
                     env_params_for_constructor['inttype'] = retro.data.Integrations.EXPERIMENTAL
-            elif inttype_str == "ALL":
+            elif retro and inttype_str == "ALL":
                     env_params_for_constructor['inttype'] = retro.data.Integrations.ALL
             else:
-                    env_params_for_constructor['inttype'] = retro.data.Integrations.ALL
+                    env_params_for_constructor['inttype'] = retro.data.Integrations.ALL if retro else None
             
             obs_type_str = retro_init_kwargs.get('obs_type', "IMAGE").upper()
-            if obs_type_str == "RAM":
+            if Observations and obs_type_str == "RAM":
                 env_params_for_constructor['obs_type'] = Observations.RAM
-            else: 
-                env_params_for_constructor['obs_type'] = Observations.IMAGE
+            else:
+                env_params_for_constructor['obs_type'] = Observations.IMAGE if Observations else None
 
             # Params for GymEnvAdapter instance within AceAttorneyEnv
             env_params_for_constructor['adapter_game_name'] = game_name_arg # Should be "ace_attorney"
@@ -558,7 +576,12 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
     effective_total_perf_score = total_perf_score_for_episode
     effective_final_score_from_env = final_score_from_env
 
-    if isinstance(game_env, AceAttorneyEnv):
+    try:
+        is_ace_attorney = isinstance(game_env, AceAttorneyEnv)
+    except (TypeError, NameError):
+        is_ace_attorney = False
+
+    if is_ace_attorney:
         current_checkpoint_score = 0
         if hasattr(game_env, 'calculate_final_performance_score'):
             try:
@@ -869,7 +892,12 @@ def main():
 
     # --- Calculate and Print Ace Attorney Specific Final Score ---
     ace_attorney_checkpoint_score = None
-    if isinstance(game_env, AceAttorneyEnv):
+    try:
+        is_ace_attorney = isinstance(game_env, AceAttorneyEnv)
+    except (TypeError, NameError):
+        is_ace_attorney = False
+
+    if is_ace_attorney:
         if hasattr(game_env, 'calculate_final_performance_score'):
             try:
                 ace_attorney_checkpoint_score = game_env.calculate_final_performance_score()
