@@ -731,9 +731,358 @@ class PokemonData:
 class PokemonRedReader:
     """Reads and interprets memory values from Pokemon Red"""
 
+    _english_text_table: dict[int, str] | None = None
+    _japanese_text_table: dict[int, str] | None = None
+
     def __init__(self, memory_view):
         """Initialize with a PyBoy memory view object"""
         self.memory = memory_view
+        self._rom_language = None  # Will be detected on first use
+        type(self)._ensure_text_tables()
+
+
+    @classmethod
+    def _ensure_text_tables(cls) -> None:
+        if cls._english_text_table is None:
+            cls._english_text_table = cls._build_english_text_table()
+        if cls._japanese_text_table is None:
+            cls._japanese_text_table = cls._build_japanese_text_table()
+
+    @staticmethod
+    def _build_english_text_table() -> dict[int, str]:
+        table: dict[int, str] = {
+            0x4E: '\n',
+            0x54: 'POKé',
+            0x6D: ':',
+            0x79: '┌',
+            0x7A: '─',
+            0x7B: '┐',
+            0x7C: '│',
+            0x7D: '└',
+            0x7E: '┘',
+            0x7F: ' ',
+            0x9A: '(',
+            0x9B: ')',
+            0x9C: ':',
+            0x9D: ';',
+            0x9E: '[',
+            0x9F: ']',
+            0xBA: 'é',
+            0xBB: "'d",
+            0xBC: "'l",
+            0xBD: "'s",
+            0xBE: "'t",
+            0xBF: "'v",
+            0xE0: "'",
+            0xE1: 'Pk',
+            0xE2: 'Mn',
+            0xE3: '-',
+            0xE4: "'r",
+            0xE5: "'m",
+            0xE6: '?',
+            0xE7: '!',
+            0xE8: '.',
+            0xE9: '.',
+            0xEA: '.',
+            0xEB: '.',
+            0xEC: '▷',
+            0xED: '►',
+            0xEE: '▼',
+            0xEF: '♂',
+            0xF0: '♭',
+            0xF1: '×',
+            0xF2: '.',
+            0xF3: '/',
+            0xF4: ',',
+            0xF5: '♀',
+        }
+        for code in range(0x80, 0x9A):
+            table[code] = chr(code - 0x80 + ord('A'))
+        for code in range(0xA0, 0xBA):
+            table[code] = chr(code - 0xA0 + ord('a'))
+        for code in range(0xF6, 0x100):
+            table[code] = str(code - 0xF6)
+        return table
+
+    @staticmethod
+    def _build_japanese_text_table() -> dict[int, str]:
+        return {
+        0x05: '\u30ac',
+        0x06: '\u30ae',
+        0x07: '\u30b0',
+        0x08: '\u30b2',
+        0x09: '\u30b4',
+        0x0A: '\u30b6',
+        0x0B: '\u30b8',
+        0x0C: '\u30ba',
+        0x0D: '\u30bc',
+        0x0E: '\u30be',
+        0x0F: '\u30c0',
+        0x10: '\u30c2',
+        0x11: '\u30c5',
+        0x12: '\u30c7',
+        0x13: '\u30c9',
+        0x19: '\u30d0',
+        0x1A: '\u30d3',
+        0x1B: '\u30d6',
+        0x1C: '\u30dc',
+        0x26: '\u304c',
+        0x27: '\u304e',
+        0x28: '\u3050',
+        0x29: '\u3052',
+        0x2A: '\u3054',
+        0x2B: '\u3056',
+        0x2C: '\u3058',
+        0x2D: '\u305a',
+        0x2E: '\u305c',
+        0x2F: '\u305e',
+        0x30: '\u3060',
+        0x31: '\u3062',
+        0x32: '\u3065',
+        0x33: '\u3067',
+        0x34: '\u3069',
+        0x3A: '\u3070',
+        0x3B: '\u3073',
+        0x3C: '\u3076',
+        0x3D: '\u3079',
+        0x3E: '\u307c',
+        0x40: '\u30d1',
+        0x41: '\u30d4',
+        0x42: '\u30d7',
+        0x43: '\u30dd',
+        0x44: '\u3071',
+        0x45: '\u3074',
+        0x46: '\u3077',
+        0x47: '\u307a',
+        0x48: '\u307d',
+        0x50: '@',
+        0x52: 'PLAYER',
+        0x53: 'RIVAL',
+        0x54: '\u30dd\u30b1\u30e2\u30f3',
+        0x56: '\u2026\u2026',
+        0x59: 'TARGET',
+        0x5A: 'USER',
+        0x5B: 'PC',
+        0x5C: 'TM',
+        0x5D: 'TRAINR',
+        0x70: '\u300c',
+        0x71: '\u300d',
+        0x72: '\u300e',
+        0x73: '\u300f',
+        0x74: '\u30fb',
+        0x75: '\u2026',
+        0x76: '\u3041',
+        0x77: '\u3047',
+        0x78: '\u3049',
+        0x79: '\u250c',
+        0x7A: '\u2500',
+        0x7B: '\u2510',
+        0x7C: '\u2502',
+        0x7D: '\u2514',
+        0x7E: '\u2518',
+        0x7F: ' ',
+        0x80: '\u30a2',
+        0x81: '\u30a4',
+        0x82: '\u30a6',
+        0x83: '\u30a8',
+        0x84: '\u30aa',
+        0x85: '\u30ab',
+        0x86: '\u30ad',
+        0x87: '\u30af',
+        0x88: '\u30b1',
+        0x89: '\u30b3',
+        0x8A: '\u30b5',
+        0x8B: '\u30b7',
+        0x8C: '\u30b9',
+        0x8D: '\u30bb',
+        0x8E: '\u30bd',
+        0x8F: '\u30bf',
+        0x90: '\u30c1',
+        0x91: '\u30c4',
+        0x92: '\u30c6',
+        0x93: '\u30c8',
+        0x94: '\u30ca',
+        0x95: '\u30cb',
+        0x96: '\u30cc',
+        0x97: '\u30cd',
+        0x98: '\u30ce',
+        0x99: '\u30cf',
+        0x9A: '\u30d2',
+        0x9B: '\u30d5',
+        0x9C: '\u30db',
+        0x9D: '\u30de',
+        0x9E: '\u30df',
+        0x9F: '\u30e0',
+        0xA0: '\u30e1',
+        0xA1: '\u30e2',
+        0xA2: '\u30e4',
+        0xA3: '\u30e6',
+        0xA4: '\u30e8',
+        0xA5: '\u30e9',
+        0xA6: '\u30eb',
+        0xA7: '\u30ec',
+        0xA8: '\u30ed',
+        0xA9: '\u30ef',
+        0xAA: '\u30f2',
+        0xAB: '\u30f3',
+        0xAC: '\u30c3',
+        0xAD: '\u30e3',
+        0xAE: '\u30e5',
+        0xAF: '\u30e7',
+        0xB0: '\u30a3',
+        0xB1: '\u3042',
+        0xB2: '\u3044',
+        0xB3: '\u3046',
+        0xB4: '\u3048',
+        0xB5: '\u304a',
+        0xB6: '\u304b',
+        0xB7: '\u304d',
+        0xB8: '\u304f',
+        0xB9: '\u3051',
+        0xBA: '\u3053',
+        0xBB: '\u3055',
+        0xBC: '\u3057',
+        0xBD: '\u3059',
+        0xBE: '\u305b',
+        0xBF: '\u305d',
+        0xC0: '\u305f',
+        0xC1: '\u3061',
+        0xC2: '\u3064',
+        0xC3: '\u3066',
+        0xC4: '\u3068',
+        0xC5: '\u306a',
+        0xC6: '\u306b',
+        0xC7: '\u306c',
+        0xC8: '\u306d',
+        0xC9: '\u306e',
+        0xCA: '\u306f',
+        0xCB: '\u3072',
+        0xCC: '\u3075',
+        0xCD: '\u30d8',
+        0xCE: '\u307b',
+        0xCF: '\u307e',
+        0xD0: '\u307f',
+        0xD1: '\u3080',
+        0xD2: '\u3081',
+        0xD3: '\u3082',
+        0xD4: '\u3084',
+        0xD5: '\u3086',
+        0xD6: '\u3088',
+        0xD7: '\u3089',
+        0xD8: '\u30ea',
+        0xD9: '\u308b',
+        0xDA: '\u308c',
+        0xDB: '\u308d',
+        0xDC: '\u308f',
+        0xDD: '\u3092',
+        0xDE: '\u3093',
+        0xDF: '\u3063',
+        0xE0: '\u3083',
+        0xE1: '\u3085',
+        0xE2: '\u3087',
+        0xE3: '\u30fc',
+        0xE4: '\uff9f',
+        0xE5: '\uff9e',
+        0xE6: '\uff1f',
+        0xE7: '\uff01',
+        0xE8: '\u3002',
+        0xE9: '\u30a1',
+        0xEA: '\u30a5',
+        0xEB: '\u30a7',
+        0xEC: '\u25b7',
+        0xED: '\u25b2',
+        0xEE: '\u25bc',
+        0xEF: '\u2642',
+        0xF0: '\u5186',
+        0xF1: '\xd7',
+        0xF2: '.',
+        0xF3: '/',
+        0xF4: ',',
+        0xF5: '\u2640',
+        0xF6: '0',
+        0xF7: '1',
+        0xF8: '2',
+        0xF9: '3',
+        0xFA: '4',
+        0xFB: '5',
+        0xFC: '6',
+        0xFD: '7',
+        0xFE: '8',
+        0xFF: '9',
+        }
+
+    def _get_text_table(self, language: str | None = None) -> dict[int, str]:
+        cls = type(self)
+        cls._ensure_text_tables()
+        if language is None:
+            language = self._detect_rom_language()
+        table = cls._japanese_text_table if language == "japanese" else cls._english_text_table
+        if table is None:
+            raise RuntimeError("Text tables were not initialized")
+        return table
+
+    def _detect_rom_language(self) -> str:
+        """Detect if ROM is Japanese or English by checking character patterns"""
+        if self._rom_language is not None:
+            return self._rom_language
+
+        # Check .env file configuration first
+        try:
+            import sys
+            import os
+            # Add project root to path to import config_loader
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
+            from config_loader import config
+
+            rom_language = config.get_rom_language()
+            if config.is_debug_enabled():
+                print(f"[PokemonRedReader] Using ROM language from .env: {rom_language}")
+            self._rom_language = rom_language
+            return self._rom_language
+
+        except Exception as e:
+            if hasattr(self, '_debug_enabled') and self._debug_enabled:
+                print(f"[PokemonRedReader] Could not load .env config: {e}")
+
+        # Check environment variable for manual override
+        import os
+        env_language = os.environ.get('POKEMON_ROM_LANGUAGE', '').lower()
+        if env_language in ['japanese', 'english']:
+            print(f"[PokemonRedReader] Using ROM language from environment: {env_language}")
+            self._rom_language = env_language
+            return self._rom_language
+
+        # Check configuration file override
+        config_language = getattr(self, '_config_language', None)
+        if config_language and config_language.lower() in ['japanese', 'english']:
+            print(f"[PokemonRedReader] Using ROM language from config: {config_language}")
+            self._rom_language = config_language.lower()
+            return self._rom_language
+
+        # Fallback to automatic detection
+        sample_bytes = self.memory[0xD158:0xD168]
+        english_table = self._get_text_table("english")
+        japanese_table = self._get_text_table("japanese")
+
+        english_score = 0
+        japanese_score = 0
+
+        for byte in sample_bytes:
+            if byte == 0x50:  # End marker
+                break
+            jp_char = japanese_table.get(byte)
+            en_char = english_table.get(byte)
+            if jp_char and not jp_char.isascii():
+                japanese_score += 1
+            if en_char and en_char.isascii() and en_char.isalpha():
+                english_score += 1
+
+        detected_language = "japanese" if japanese_score > english_score else "english"
+        print(f"[PokemonRedReader] Auto-detected ROM language: {detected_language} (JP:{japanese_score}, EN:{english_score})")
+        self._rom_language = detected_language
+        return self._rom_language
 
     def get_warps(self) -> list[tuple[int, int]]:
         """Get all the warps listed for the current map.
@@ -772,120 +1121,29 @@ class PokemonRedReader:
         )
         return money
 
+
     def _convert_text(self, bytes_data: list[int]) -> str:
-        """Convert Pokemon text format to ASCII"""
-        result = ""
-        for b in bytes_data:
-            if b == 0x50:  # End marker
+        """Convert Pokemon text format to characters (supports both English and Japanese ROMs)"""
+        text_table = self._get_text_table()
+        result_chars: list[str] = []
+
+        for byte in bytes_data:
+            if byte == 0x50:  # End marker
                 break
-            elif b == 0x4E:  # Line break
-                result += "\n"
-            # Main character ranges
-            elif 0x80 <= b <= 0x99:  # A-Z
-                result += chr(b - 0x80 + ord("A"))
-            elif 0xA0 <= b <= 0xB9:  # a-z
-                result += chr(b - 0xA0 + ord("a"))
-            elif 0xF6 <= b <= 0xFF:  # Numbers 0-9
-                result += str(b - 0xF6)
-            # Punctuation characters (9A-9F)
-            elif b == 0x9A:  # (
-                result += "("
-            elif b == 0x9B:  # )
-                result += ")"
-            elif b == 0x9C:  # :
-                result += ":"
-            elif b == 0x9D:  # ;
-                result += ";"
-            elif b == 0x9E:  # [
-                result += "["
-            elif b == 0x9F:  # ]
-                result += "]"
-            # Special characters
-            elif b == 0x7F:  # Space
-                result += " "
-            elif b == 0x6D:  # : (also appears here)
-                result += ":"
-            elif b == 0x54:  # POKé control character
-                result += "POKé"
-            elif b == 0xBA:  # é
-                result += "é"
-            elif b == 0xBB:  # 'd
-                result += "'d"
-            elif b == 0xBC:  # 'l
-                result += "'l"
-            elif b == 0xBD:  # 's
-                result += "'s"
-            elif b == 0xBE:  # 't
-                result += "'t"
-            elif b == 0xBF:  # 'v
-                result += "'v"
-            elif b == 0xE1:  # PK
-                result += "Pk"
-            elif b == 0xE2:  # MN
-                result += "Mn"
-            elif b == 0xE3:  # -
-                result += "-"
-            elif b == 0xE6:  # ?
-                result += "?"
-            elif b == 0xE7:  # !
-                result += "!"
-            elif b == 0xE8:  # .
-                result += "."
-            elif b == 0xE9:  # .
-                result += "."
-            # E-register special characters
-            elif b == 0xE0:  # '
-                result += "'"
-            elif b == 0xE1:  # PK
-                result += "POKé"
-            elif b == 0xE2:  # MN
-                result += "MON"
-            elif b == 0xE3:  # -
-                result += "-"
-            elif b == 0xE4:  # 'r
-                result += "'r"
-            elif b == 0xE5:  # 'm
-                result += "'m"
-            elif b == 0xE6:  # ?
-                result += "?"
-            elif b == 0xE7:  # !
-                result += "!"
-            elif b == 0xE8:  # .
-                result += "."
-            elif b == 0xE9:  # ア
-                result += "ア"
-            elif b == 0xEA:  # ウ
-                result += "ウ"
-            elif b == 0xEB:  # エ
-                result += "エ"
-            elif b == 0xEC:  # ▷
-                result += "▷"
-            elif b == 0xED:  # ►
-                result += "►"
-            elif b == 0xEE:  # ▼
-                result += "▼"
-            elif b == 0xEF:  # ♂
-                result += "♂"
-            # F-register special characters
-            elif b == 0xF0:  # ♭
-                result += "♭"
-            elif b == 0xF1:  # ×
-                result += "×"
-            elif b == 0xF2:  # .
-                result += "."
-            elif b == 0xF3:  # /
-                result += "/"
-            elif b == 0xF4:  # ,
-                result += ","
-            elif b == 0xF5:  # ♀
-                result += "♀"
-            # Numbers 0-9 (0xF6-0xFF)
-            elif 0xF6 <= b <= 0xFF:
-                result += str(b - 0xF6)
+            if byte == 0x4E:  # Line break
+                result_chars.append("\n")
+                continue
+            if byte == 0x7F:  # Space
+                result_chars.append(" ")
+                continue
+
+            mapped = text_table.get(byte)
+            if mapped is not None:
+                result_chars.append(mapped)
             else:
-                # For debugging, show the hex value of unknown characters
-                result += f"[{b:02X}]"
-        return result.strip()
+                result_chars.append(f"[{byte:02X}]")
+
+        return "".join(result_chars).strip()
 
     def read_player_name(self) -> str:
         """Read the player's name"""
@@ -1124,83 +1382,60 @@ class PokemonRedReader:
 
         return items
 
+
     def read_dialog(self) -> str:
         """Read any dialog text currently on screen by scanning the tilemap buffer"""
         # Tilemap buffer is from C3A0 to C507
         buffer_start = 0xC3A0
         buffer_end = 0xC507
 
-        # Get all bytes from the buffer
         buffer_bytes = [self.memory[addr] for addr in range(buffer_start, buffer_end)]
+        text_table = self._get_text_table()
 
-        # Look for sequences of text (ignoring long sequences of 0x7F/spaces)
         text_lines = []
-        current_line = []
+        current_line: list[int] = []
         space_count = 0
         last_was_border = False
 
-        for b in buffer_bytes:
-            if b == 0x7C:  # ║ character
+        for byte in buffer_bytes:
+            if byte == 0x7C:  # Vertical border
                 if last_was_border:
-                    # If the last character was a border and this is ║, treat as newline
                     text = self._convert_text(current_line)
                     if text.strip():
                         text_lines.append(text)
                     current_line = []
                     space_count = 0
-                else:
-                    # current_line.append(b)
-                    pass
                 last_was_border = True
-            elif b == 0x7F:  # Space
-                space_count += 1
-                current_line.append(b)  # Always keep spaces
-                last_was_border = False
-            # All text characters: uppercase, lowercase, special chars, punctuation, symbols
-            elif (
-                # Box drawing (0x79-0x7E)
-                # (0x79 <= b <= 0x7E)
-                # or
-                # Uppercase (0x80-0x99)
-                (0x80 <= b <= 0x99)
-                or
-                # Punctuation (0x9A-0x9F)
-                (0x9A <= b <= 0x9F)
-                or
-                # Lowercase (0xA0-0xB9)
-                (0xA0 <= b <= 0xB9)
-                or
-                # Contractions (0xBA-0xBF)
-                (0xBA <= b <= 0xBF)
-                or
-                # Special characters in E-row (0xE0-0xEF)
-                (0xE0 <= b <= 0xEF)
-                or
-                # Special characters in F-row (0xF0-0xF5)
-                (0xF0 <= b <= 0xF5)
-                or
-                # Numbers (0xF6-0xFF)
-                (0xF6 <= b <= 0xFF)
-                or
-                # Line break
-                b == 0x4E
-            ):
-                space_count = 0
-                current_line.append(b)
-                last_was_border = (
-                    0x79 <= b <= 0x7E
-                )  # Track if this is a border character
+                continue
 
-            # If we see a lot of spaces, might be end of line
+            if byte == 0x50:  # Terminator
+                continue
+
+            if byte == 0x7F:  # Space
+                space_count += 1
+                current_line.append(byte)
+                last_was_border = False
+                continue
+
+            if byte == 0x4E:  # Line break
+                current_line.append(byte)
+                space_count = 0
+                last_was_border = False
+                continue
+
+            if byte in text_table:
+                current_line.append(byte)
+                space_count = 0
+                last_was_border = 0x79 <= byte <= 0x7E
+
             if space_count > 10 and current_line:
                 text = self._convert_text(current_line)
-                if text.strip():  # Only add non-empty lines
+                if text.strip():
                     text_lines.append(text)
                 current_line = []
                 space_count = 0
                 last_was_border = False
 
-        # Add final line if any
         if current_line:
             text = self._convert_text(current_line)
             if text.strip():
@@ -1208,9 +1443,7 @@ class PokemonRedReader:
 
         text = "\n".join(text_lines)
 
-        # Post-process for name entry context
         if "lower case" in text.lower() or "UPPER CASE" in text:
-            # We're in name entry, replace ♭ with ED
             text = text.replace("♭", "ED\n")
 
         return text
