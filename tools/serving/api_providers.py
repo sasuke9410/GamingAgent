@@ -2032,36 +2032,69 @@ def llm_studio_completion(
     )
 
     # Construct the user message content
-    if base64_image:
-        # LM Studio requires JPEG format - convert PNG base64 to JPEG base64
-        import base64 as _b64
-        import io
+    import base64 as _b64
+    import io
+    import time as _time
+
+    def _make_jpeg_content(quality: int, scale: float = 1.0) -> list:
+        """Convert base64 PNG to JPEG and build message content."""
         from PIL import Image
         png_bytes = _b64.b64decode(base64_image)
         img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+        if scale < 1.0:
+            new_w = max(1, int(img.width * scale))
+            new_h = max(1, int(img.height * scale))
+            img = img.resize((new_w, new_h), Image.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=85)
+        img.save(buf, format="JPEG", quality=quality)
         jpeg_b64 = _b64.b64encode(buf.getvalue()).decode("utf-8")
-        user_content = [
+        return [
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{jpeg_b64}"}},
             {"type": "text", "text": prompt}
         ]
+
+    if base64_image:
+        # LM Studio requires JPEG format - convert PNG base64 to JPEG base64
+        # Retry with lower quality/size if "failed to process image" occurs
+        retry_params = [(85, 1.0), (70, 0.75), (60, 0.5)]
+        last_exc = None
+        for attempt, (quality, scale) in enumerate(retry_params):
+            user_content = _make_jpeg_content(quality, scale)
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": user_content})
+            try:
+                response = client.chat.completions.create(
+                    model=actual_model_name,
+                    messages=messages,
+                    max_tokens=token_limit,
+                    temperature=temperature,
+                    stream=False
+                )
+                return response.choices[0].message.content
+            except BadRequestError as e:
+                if "failed to process image" in str(e).lower() and attempt < len(retry_params) - 1:
+                    print(f"LLM Studio image error (retry {attempt+1}, quality={quality}, scale={scale}): {e}")
+                    _time.sleep(1)
+                    last_exc = e
+                    continue
+                raise
+        raise last_exc
     else:
         user_content = [{"type": "text", "text": prompt}]
-
-    messages = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": user_content})
-
-    response = client.chat.completions.create(
-        model=actual_model_name,
-        messages=messages,
-        max_tokens=token_limit,
-        temperature=temperature,
-        stream=False
-    )
-    return response.choices[0].message.content
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": user_content})
+        response = client.chat.completions.create(
+            model=actual_model_name,
+            messages=messages,
+            max_tokens=token_limit,
+            temperature=temperature,
+            stream=False
+        )
+        return response.choices[0].message.content
 
 @retry_on_openai_error
 def llm_studio_multiimage_completion(
