@@ -154,7 +154,7 @@ class PerceptionModule(CoreModule):
             assert self.observation.img_path is not None, "to process from graphic representation, image should have been prepared and path should exist in observation."
             
             # First scale up the image
-            new_img_path = scale_image_up(self.observation.get_img_path())
+            new_img_path = scale_image_up(self.observation.get_img_path(), maximum_scale=640)
             self.processed_observation.img_path = new_img_path
             
             # Apply scaffolding function if specified

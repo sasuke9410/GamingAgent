@@ -171,7 +171,7 @@ def convert_numpy_to_python(item):
     elif isinstance(item, (np.int_, np.intc, np.intp, np.int8, np.int16, np.int32, np.int64,
                         np.uint8, np.uint16, np.uint32, np.uint64)):
         return int(item)
-    elif isinstance(item, (np.float_, np.float16, np.float32, np.float64)):
+    elif isinstance(item, (np.float64, np.float16, np.float32)):
         return float(item)
     elif isinstance(item, np.bool_):
         return bool(item)

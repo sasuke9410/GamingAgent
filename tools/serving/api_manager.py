@@ -48,7 +48,10 @@ from .api_providers import (
     zai_text_completion,
     longcat_text_completion,
     longcat_completion,
-    longcat_multiimage_completion
+    longcat_multiimage_completion,
+    llm_studio_text_completion,
+    llm_studio_completion,
+    llm_studio_multiimage_completion
 )
 
 # Import cost calculator utilities
@@ -82,18 +85,21 @@ class APIManager:
     """
     
     def __init__(
-        self, 
-        game_name: str, 
+        self,
+        game_name: str,
         base_cache_dir: str = "cache",
         enable_logging: bool = True,
         info: Optional[Dict[str, Any]] = None,
         session_dir: Optional[str] = None,
         vllm_url: Optional[str] = None,
-        modal_url: Optional[str] = None
+        modal_url: Optional[str] = None,
+        llm_studio_host: str = "localhost",
+        llm_studio_port: int = 1234,
+        llm_studio_api_key: str = "not-needed"
     ):
         """
         Initialize the API Manager.
-        
+
         Args:
             game_name (str): Name of the game/application (e.g., "ace_attorney")
             base_cache_dir (str): Base directory for all cache files
@@ -102,6 +108,11 @@ class APIManager:
                                    Can include 'model_name', 'modality', 'datetime', etc.
             session_dir (str, optional): Optional path to an existing session directory.
                                          If provided, the directory structure setup is skipped.
+            vllm_url (str, optional): URL for vLLM server
+            modal_url (str, optional): URL for Modal server
+            llm_studio_host (str): LLM Studio server host (default: localhost)
+            llm_studio_port (int): LLM Studio server port (default: 1234)
+            llm_studio_api_key (str): LLM Studio API key (default: not-needed)
         """
         self.game_name = game_name
         self.base_cache_dir = base_cache_dir
@@ -110,10 +121,15 @@ class APIManager:
 
         self.vllm_url = vllm_url
         self.modal_url = modal_url
+        self.llm_studio_host = llm_studio_host
+        self.llm_studio_port = llm_studio_port
+        self.llm_studio_api_key = llm_studio_api_key
 
         print("API manager initialization parameters:")
         print("vllm_url:", self.vllm_url)
         print("modal_url:", self.modal_url)
+        print("llm_studio_host:", self.llm_studio_host)
+        print("llm_studio_port:", self.llm_studio_port)
         
         # Create timestamp for this session (use from info if provided)
         self.timestamp = self.info.get('datetime', datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
@@ -546,6 +562,18 @@ class APIManager:
                     temperature=temperature,
                     token_limit=token_limit
                 )
+            elif model_name.startswith("llm-studio-"):
+                completion = llm_studio_completion(
+                    system_prompt=system_prompt,
+                    model_name=model_name,
+                    prompt=prompt,
+                    base64_image=base64_image,
+                    temperature=temperature,
+                    token_limit=token_limit,
+                    port=getattr(self, 'llm_studio_port', 1234),
+                    host=getattr(self, 'llm_studio_host', 'localhost'),
+                    api_key=getattr(self, 'llm_studio_api_key', 'not-needed')
+                )
             else:
                 raise ValueError(f"Unsupported model: {model_name}")
             
@@ -914,6 +942,17 @@ class APIManager:
                     token_limit=token_limit,
                     thinking=thinking
                 )
+            elif model_name.startswith("llm-studio-"):
+                completion = llm_studio_text_completion(
+                    system_prompt=system_prompt,
+                    model_name=model_name,
+                    prompt=prompt,
+                    temperature=temperature,
+                    token_limit=token_limit,
+                    port=getattr(self, 'llm_studio_port', 1234),
+                    host=getattr(self, 'llm_studio_host', 'localhost'),
+                    api_key=getattr(self, 'llm_studio_api_key', 'not-needed')
+                )
             else:
                 raise ValueError(f"Unsupported model: {model_name}")
             
@@ -1197,6 +1236,19 @@ class APIManager:
                     list_content=list_content,
                     list_image_base64=list_image_base64,
                     temperature=temperature
+                )
+            elif model_name.startswith("llm-studio-"):
+                completion = llm_studio_multiimage_completion(
+                    system_prompt=system_prompt,
+                    model_name=model_name,
+                    prompt=prompt,
+                    list_content=list_content,
+                    list_image_base64=list_image_base64,
+                    temperature=temperature,
+                    token_limit=token_limit,
+                    port=getattr(self, 'llm_studio_port', 1234),
+                    host=getattr(self, 'llm_studio_host', 'localhost'),
+                    api_key=getattr(self, 'llm_studio_api_key', 'not-needed')
                 )
             else:
                 raise ValueError(f"Unsupported model: {model_name}")

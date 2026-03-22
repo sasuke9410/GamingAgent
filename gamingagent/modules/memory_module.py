@@ -236,7 +236,7 @@ class MemoryModule(CoreModule):
             if len(current_trajectory.strip()) > 50:  # Ensure we have meaningful content
                 print(f"[MemoryModule] Trajectory reached length: {len(observation.game_trajectory.trajectory)}.")
                 print(f"[MemoryModule] Current trajectory length: {char_len} chars")
-                print(f"[MemoryModule] Trajectory ≈ {est_tokens:,} tokens — summarizing…")
+                print(f"[MemoryModule] Trajectory approx {est_tokens:,} tokens - summarizing...")
                 
                 # Generate summary
                 new_summary = self._summarize(current_trajectory)

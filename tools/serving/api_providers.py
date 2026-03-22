@@ -13,7 +13,10 @@ from google.generativeai import types
 import google.api_core.exceptions
 from together import Together
 
-from zai import ZaiClient
+try:
+    from zai import ZaiClient
+except ImportError:
+    ZaiClient = None
 
 
 
@@ -1921,3 +1924,217 @@ def longcat_multiimage_completion(system_prompt, model_name, prompt, list_conten
         temperature=temperature,
     )
     return response.choices[0].message.content
+
+
+# ======== LLM STUDIO LOCAL MODEL INTEGRATION ========
+
+def parse_llm_studio_model_name(model_name: str) -> str:
+    """
+    Extracts the actual model path from a LLM Studio-prefixed model name.
+    For example, 'llm-studio-Qwen/Qwen2.5-VL-32B-Instruct' becomes 'Qwen/Qwen2.5-VL-32B-Instruct'.
+    """
+    if model_name.startswith("llm-studio-"):
+        return model_name[len("llm-studio-"):]
+    return model_name
+
+@retry_on_openai_error
+def llm_studio_text_completion(
+    system_prompt: str,
+    model_name: str,
+    prompt: str,
+    temperature: float = 1.0,
+    token_limit: int = 30000,
+    port: int = 1234,
+    host: str = "localhost",
+    api_key: str = "not-needed"
+) -> str:
+    """
+    LLM Studio text completion API call via OpenAI-compatible endpoint.
+
+    Args:
+        system_prompt (str): System prompt
+        model_name (str): Model name with llm-studio- prefix
+        prompt (str): User prompt
+        temperature (float): Temperature parameter (0-1)
+        token_limit (int): Maximum number of tokens for the completion response
+        port (int): LLM Studio server port (default 1234)
+        host (str): LLM Studio server host (default localhost)
+        api_key (str): API key (not needed for local LLM Studio)
+
+    Returns:
+        str: Generated text
+    """
+    print(f"LLM Studio text-only API call: model={model_name}")
+
+    # Parse model name to remove llm-studio- prefix
+    actual_model_name = parse_llm_studio_model_name(model_name)
+
+    # Use OpenAI client with LLM Studio base URL
+    from openai import OpenAI
+    client = OpenAI(
+        api_key=api_key,
+        base_url=f"http://{host}:{port}/v1"
+    )
+
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    response = client.chat.completions.create(
+        model=actual_model_name,
+        messages=messages,
+        max_tokens=token_limit,
+        temperature=temperature,
+        stream=False
+    )
+    return response.choices[0].message.content
+
+@retry_on_openai_error
+def llm_studio_completion(
+    system_prompt: str,
+    model_name: str,
+    prompt: str,
+    base64_image: str = None,
+    temperature: float = 1.0,
+    token_limit: int = 30000,
+    port: int = 1234,
+    host: str = "localhost",
+    api_key: str = "not-needed"
+) -> str:
+    """
+    LLM Studio vision-text completion API call via OpenAI-compatible endpoint.
+
+    Args:
+        system_prompt (str): System prompt
+        model_name (str): Model name with llm-studio- prefix
+        prompt (str): User prompt
+        base64_image (str, optional): Base64-encoded image data
+        temperature (float): Temperature parameter (0-1)
+        token_limit (int): Maximum number of tokens for the completion response
+        port (int): LLM Studio server port (default 1234)
+        host (str): LLM Studio server host (default localhost)
+        api_key (str): API key (not needed for local LLM Studio)
+
+    Returns:
+        str: Generated text
+    """
+    print(f"LLM Studio {'vision-text' if base64_image else 'text-only'} API call: model={model_name}")
+
+    # Parse model name to remove llm-studio- prefix
+    actual_model_name = parse_llm_studio_model_name(model_name)
+
+    # Use OpenAI client with LLM Studio base URL
+    from openai import OpenAI
+    client = OpenAI(
+        api_key=api_key,
+        base_url=f"http://{host}:{port}/v1"
+    )
+
+    # Construct the user message content
+    if base64_image:
+        # LM Studio requires JPEG format - convert PNG base64 to JPEG base64
+        import base64 as _b64
+        import io
+        from PIL import Image
+        png_bytes = _b64.b64decode(base64_image)
+        img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        jpeg_b64 = _b64.b64encode(buf.getvalue()).decode("utf-8")
+        user_content = [
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{jpeg_b64}"}},
+            {"type": "text", "text": prompt}
+        ]
+    else:
+        user_content = [{"type": "text", "text": prompt}]
+
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_content})
+
+    response = client.chat.completions.create(
+        model=actual_model_name,
+        messages=messages,
+        max_tokens=token_limit,
+        temperature=temperature,
+        stream=False
+    )
+    return response.choices[0].message.content
+
+@retry_on_openai_error
+def llm_studio_multiimage_completion(
+    system_prompt: str,
+    model_name: str,
+    prompt: str,
+    list_content: list,
+    list_image_base64: list,
+    temperature: float = 1.0,
+    token_limit: int = 30000,
+    port: int = 1234,
+    host: str = "localhost",
+    api_key: str = "not-needed"
+) -> str:
+    """
+    LLM Studio multi-image completion API call via OpenAI-compatible endpoint.
+
+    Args:
+        system_prompt (str): System prompt
+        model_name (str): Model name with llm-studio- prefix
+        prompt (str): User prompt
+        list_content (List[str]): List of text content corresponding to each image
+        list_image_base64 (List[str]): List of base64-encoded image data
+        temperature (float): Temperature parameter (0-1)
+        token_limit (int): Maximum number of tokens for the completion response
+        port (int): LLM Studio server port (default 1234)
+        host (str): LLM Studio server host (default localhost)
+        api_key (str): API key (not needed for local LLM Studio)
+
+    Returns:
+        str: Generated text
+    """
+    print(f"LLM Studio multi-image API call: model={model_name}")
+
+    # Parse model name to remove llm-studio- prefix
+    actual_model_name = parse_llm_studio_model_name(model_name)
+
+    # Use OpenAI client with LLM Studio base URL
+    from openai import OpenAI
+    client = OpenAI(
+        api_key=api_key,
+        base_url=f"http://{host}:{port}/v1"
+    )
+
+    # Construct the user message content with multiple images
+    user_content = []
+
+    # Add text content and corresponding images
+    for text_item, base64_image in zip(list_content, list_image_base64):
+        user_content.append({
+            "type": "text",
+            "text": text_item,
+        })
+        user_content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{base64_image}"}
+        })
+
+    # Add final prompt
+    user_content.append({"type": "text", "text": prompt})
+
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_content})
+
+    response = client.chat.completions.create(
+        model=actual_model_name,
+        messages=messages,
+        max_tokens=token_limit,
+        temperature=temperature,
+        stream=False
+    )
+    return response.choices[0].message.content
+
+# ======== END LLM STUDIO LOCAL MODEL INTEGRATION ========

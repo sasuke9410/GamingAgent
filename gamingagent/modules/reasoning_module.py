@@ -17,17 +17,18 @@ class ReasoningModule(CoreModule):
     the required abstract methods.
     """
     
-    def __init__(self, 
-                model_name="claude-3-7-sonnet-latest", 
+    def __init__(self,
+                model_name="claude-3-7-sonnet-latest",
                 observation_mode="vision",
                 cache_dir="cache",
-                system_prompt="", 
-                prompt="", 
+                system_prompt="",
+                prompt="",
                 use_perception=True,
                 use_memory=True,
                 use_cot=True,
-                token_limit=100000, 
+                token_limit=100000,
                 reasoning_effort="high",
+                temperature=1.0,
                 vllm_url=None,
                 modal_url=None
         ):
@@ -55,7 +56,8 @@ class ReasoningModule(CoreModule):
             prompt=prompt,
             cache_dir=cache_dir,
             token_limit=token_limit,
-            reasoning_effort=reasoning_effort,  # Always use high reasoning effort
+            reasoning_effort=reasoning_effort,
+            temperature=temperature,
             vllm_url=vllm_url,
             modal_url=modal_url
         )
@@ -95,13 +97,21 @@ class ReasoningModule(CoreModule):
             use_memory_module=use_memory,
             use_perception_module=use_perception,
         )
+
+        # Debug: Print prompt information (uncomment for debugging)
+        # print(f"[DEBUG] Reasoning prompt template length: {len(self.prompt)}")
+        # print(f"[DEBUG] Full context length: {len(full_context)}")
+        # print(f"[DEBUG] Full context preview: {full_context[:200]}...")
+        # print(f"[DEBUG] Use memory: {use_memory}, Use perception: {use_perception}")
         
         # Choose API call based on whether an image is available
         if self.observation_mode in ["vision", "both"]:
-            if image_path:
+            if not image_path:
                 print("Warning: No image path provided for vision API call. Using text-only API.")
-            image_path = scale_image_up(image_path)
-            response = self._call_vision_api(full_context, image_path, custom_prompt)
+                response = self._call_text_api(full_context, custom_prompt)
+            else:
+                image_path = scale_image_up(image_path, maximum_scale=640)
+                response = self._call_vision_api(full_context, image_path, custom_prompt)
         else:
             response = self._call_text_api(full_context, custom_prompt)
 
@@ -145,11 +155,10 @@ class ReasoningModule(CoreModule):
         else:
             user_prompt = context
 
-        print(f"""
------------------------- VISION API — FINAL USER PROMPT ------------------------
-{user_prompt}
------------------------- END FINAL USER PROMPT ------------------------
-""")
+        # Print prompt summary (avoiding Unicode issues)
+        print("------------------------ VISION API - FINAL USER PROMPT ------------------------")
+        print(f"Prompt length: {len(user_prompt)} characters")
+        print("------------------------ END FINAL USER PROMPT ------------------------")
         
         # Call the vision-text API
         response = self.api_manager.vision_text_completion(
@@ -160,18 +169,19 @@ class ReasoningModule(CoreModule):
             thinking=True,
             reasoning_effort=self.reasoning_effort,
             token_limit=self.token_limit,
+            temperature=self.temperature,
         )
-        
+
         return response
-    
+
     def _call_text_api(self, context, custom_prompt=None):
         """
         Call the text-only API with context.
-        
+
         Args:
             context (str): Formatted context with perception and memory data
             custom_prompt (str, optional): Custom prompt to use
-            
+
         Returns:
             str: Raw response from the API
         """
@@ -180,12 +190,11 @@ class ReasoningModule(CoreModule):
             user_prompt = context + "\n\n" + custom_prompt
         else:
             user_prompt = context
-        
-        print(f"""
------------------------- TEXT API - FINAL USER PROMPT ------------------------
-{user_prompt}
------------------------- END TEXT API PROMPT ------------------------
-""")
+
+        # Print prompt summary (avoiding Unicode issues)
+        print("------------------------ TEXT API - FINAL USER PROMPT ------------------------")
+        print(f"Prompt length: {len(user_prompt)} characters")
+        print("------------------------ END TEXT API PROMPT ------------------------")
         # Call the API
         response = self.api_manager.text_only_completion(
             model_name=self.model_name,
@@ -194,6 +203,7 @@ class ReasoningModule(CoreModule):
             thinking=True,
             reasoning_effort=self.reasoning_effort,
             token_limit=self.token_limit,
+            temperature=self.temperature,
         )
         
         return response
