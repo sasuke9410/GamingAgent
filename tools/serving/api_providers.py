@@ -2033,8 +2033,17 @@ def llm_studio_completion(
 
     # Construct the user message content
     if base64_image:
+        # LM Studio requires JPEG format - convert PNG base64 to JPEG base64
+        import base64 as _b64
+        import io
+        from PIL import Image
+        png_bytes = _b64.b64decode(base64_image)
+        img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        jpeg_b64 = _b64.b64encode(buf.getvalue()).decode("utf-8")
         user_content = [
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{jpeg_b64}"}},
             {"type": "text", "text": prompt}
         ]
     else:

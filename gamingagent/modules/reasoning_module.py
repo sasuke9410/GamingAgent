@@ -17,17 +17,18 @@ class ReasoningModule(CoreModule):
     the required abstract methods.
     """
     
-    def __init__(self, 
-                model_name="claude-3-7-sonnet-latest", 
+    def __init__(self,
+                model_name="claude-3-7-sonnet-latest",
                 observation_mode="vision",
                 cache_dir="cache",
-                system_prompt="", 
-                prompt="", 
+                system_prompt="",
+                prompt="",
                 use_perception=True,
                 use_memory=True,
                 use_cot=True,
-                token_limit=100000, 
+                token_limit=100000,
                 reasoning_effort="high",
+                temperature=1.0,
                 vllm_url=None,
                 modal_url=None
         ):
@@ -55,7 +56,8 @@ class ReasoningModule(CoreModule):
             prompt=prompt,
             cache_dir=cache_dir,
             token_limit=token_limit,
-            reasoning_effort=reasoning_effort,  # Always use high reasoning effort
+            reasoning_effort=reasoning_effort,
+            temperature=temperature,
             vllm_url=vllm_url,
             modal_url=modal_url
         )
@@ -108,7 +110,7 @@ class ReasoningModule(CoreModule):
                 print("Warning: No image path provided for vision API call. Using text-only API.")
                 response = self._call_text_api(full_context, custom_prompt)
             else:
-                image_path = scale_image_up(image_path)
+                image_path = scale_image_up(image_path, maximum_scale=640)
                 response = self._call_vision_api(full_context, image_path, custom_prompt)
         else:
             response = self._call_text_api(full_context, custom_prompt)
@@ -167,18 +169,19 @@ class ReasoningModule(CoreModule):
             thinking=True,
             reasoning_effort=self.reasoning_effort,
             token_limit=self.token_limit,
+            temperature=self.temperature,
         )
-        
+
         return response
-    
+
     def _call_text_api(self, context, custom_prompt=None):
         """
         Call the text-only API with context.
-        
+
         Args:
             context (str): Formatted context with perception and memory data
             custom_prompt (str, optional): Custom prompt to use
-            
+
         Returns:
             str: Raw response from the API
         """
@@ -187,7 +190,7 @@ class ReasoningModule(CoreModule):
             user_prompt = context + "\n\n" + custom_prompt
         else:
             user_prompt = context
-        
+
         # Print prompt summary (avoiding Unicode issues)
         print("------------------------ TEXT API - FINAL USER PROMPT ------------------------")
         print(f"Prompt length: {len(user_prompt)} characters")
@@ -200,6 +203,7 @@ class ReasoningModule(CoreModule):
             thinking=True,
             reasoning_effort=self.reasoning_effort,
             token_limit=self.token_limit,
+            temperature=self.temperature,
         )
         
         return response

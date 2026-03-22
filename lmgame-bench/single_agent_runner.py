@@ -25,10 +25,19 @@ except ImportError:
 from gamingagent.agents.base_agent import BaseAgent
 from gamingagent.modules import PerceptionModule, ReasoningModule # Observation is imported by Env
 from tools.utils import draw_grid_on_image
+try:
+    from tools.log_window import LogWindow
+except ImportError as e:
+    print(f"Warning: LogWindow not available: {e}")
+    LogWindow = None
 # Directly import the specific environment we are using
 from gamingagent.envs.custom_01_2048.twentyFortyEightEnv import TwentyFortyEightEnv
 from gamingagent.envs.custom_02_sokoban.sokobanEnv import SokobanEnv
-from gamingagent.envs.custom_03_candy_crush.candyCrushEnv import CandyCrushEnv
+try:
+    from gamingagent.envs.custom_03_candy_crush.candyCrushEnv import CandyCrushEnv
+except ImportError:
+    print("Warning: CandyCrush environment not available")
+    CandyCrushEnv = None
 from gamingagent.envs.custom_04_tetris.tetrisEnv import TetrisEnv
 from gamingagent.envs.custom_05_doom.doomEnv import DoomEnvWrapper
 from gamingagent.envs.custom_06_pokemon_red.pokemonRedEnv import PokemonRedEnv
@@ -41,7 +50,11 @@ except ImportError:
     print("Warning: Retro game environments not available")
     SuperMarioBrosEnv = AceAttorneyEnv = NineteenFortyTwoEnv = None
 
-from gamingagent.envs.zoo_01_tictactoe.TicTacToeEnv import SingleTicTacToeEnv
+try:
+    from gamingagent.envs.zoo_01_tictactoe.TicTacToeEnv import SingleTicTacToeEnv
+except ImportError:
+    print("Warning: TicTacToe environment not available")
+    SingleTicTacToeEnv = None
 
 game_config_mapping = {
     "twenty_forty_eight": "custom_01_2048",
@@ -89,8 +102,10 @@ def parse_arguments(defaults_map=None, argv_to_parse=None):
     parser.add_argument("--use_perception", type=str_to_bool, default=True, help="Enable perception API calls for image processing. Default is True.")
     parser.add_argument("--use_summary", type=str_to_bool, default=False, help="Enable trajectory summarization in memory module. Default is False.")
     parser.add_argument("--token_limit", type=int, default=100000, help="Token limit for the agent's input.")
+    parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature for LLM calls (0.0-1.0).")
     parser.add_argument("--max_steps_per_episode", type=int, default=1000, help="Max steps per episode.")
     parser.add_argument("--use_custom_prompt", action="store_true", help="If set, will use the custom prompt from module_prompts.json if present.")
+    parser.add_argument("--prompts_file", type=str, default="module_prompts.json", help="Prompts JSON filename inside the game config directory. Default: module_prompts.json")
     parser.add_argument("--scaffolding", type=str, default=None, help="Grid dimensions as '(rows,cols)' for coordinate grid on images, e.g., '(5,5)'. Default is None.")
     parser.add_argument("--seed", type=int, default=None, help="Random seed for environment.")
     # Env type is fixed to custom gym for this runner
@@ -492,6 +507,21 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
     total_perf_score_for_episode = 0.0
     final_step_num = 0
 
+    # ── Log window ────────────────────────────────────────────────────────────
+    log_win = None
+    episode_start_wall = time.time()
+    if LogWindow is not None:
+        try:
+            log_win = LogWindow(
+                title=f"Agent Monitor — E{episode_id}",
+                x_offset=530, y_offset=0,
+            )
+            log_win.start()
+            log_win.log_message(f"Episode {episode_id} started  [{args.game_name}]")
+        except Exception as _lw_err:
+            print(f"[LogWindow] Failed to start: {_lw_err}")
+            log_win = None
+
     for step_num in range(args.max_steps_per_episode):
         final_step_num = step_num + 1
         game_env.render() # Call env's render method directly
@@ -561,10 +591,35 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
         total_reward_for_episode += reward
         total_perf_score_for_episode += current_step_perf_score
 
+        # ── Update log window ─────────────────────────────────────────────
+        if log_win is not None:
+            try:
+                _action_for_log = action_str_agent if not isinstance(game_env, DoomEnvWrapper) else action_str
+                _state_for_log  = getattr(processed_agent_observation, "textual_representation", "") or ""
+                log_win.log_step(
+                    step=final_step_num,
+                    elapsed_s=time.time() - episode_start_wall,
+                    action=_action_for_log,
+                    thought=thought_process or "",
+                    game_state=_state_for_log,
+                    reward=reward,
+                )
+            except Exception:
+                pass
+
         if terminated or truncated:
             break
             
     # game_env.close() is called after all runs are complete in main
+
+    # ── Close log window ──────────────────────────────────────────────────────
+    if log_win is not None:
+        try:
+            log_win.log_message(f"Episode {episode_id} finished after {final_step_num} steps.")
+            time.sleep(0.3)
+            log_win.close()
+        except Exception:
+            pass
 
     final_score_from_env = float(last_info.get('total_score', 0.0)) 
 
@@ -654,6 +709,7 @@ def main():
                             agent_config_yaml = loaded_yaml['agent']
 
                             defaults_from_yaml['token_limit'] = agent_config_yaml.get('token_limit')
+                            defaults_from_yaml['temperature'] = agent_config_yaml.get('temperature')
                             defaults_from_yaml['harness'] = agent_config_yaml.get('harness', False) # Default to False if not specified
 
                             defaults_from_yaml['model_name'] = agent_config_yaml.get('model_name')
@@ -735,7 +791,7 @@ def main():
 
     agent_prompts_config_path = None
     if final_config_dir_name: # It might still be None if game_name was never resolved
-        agent_prompts_config_path = os.path.join(args.config_root_dir, final_config_dir_name, "module_prompts.json")
+        agent_prompts_config_path = os.path.join(args.config_root_dir, final_config_dir_name, args.prompts_file)
         if not os.path.isfile(agent_prompts_config_path):
             print(f"Warning: Agent prompts file {agent_prompts_config_path} not found. Agent will use default prompts.")
             agent_prompts_config_path = None
@@ -853,6 +909,7 @@ def main():
         vllm_url=args.vllm_url,
         modal_url=args.modal_url,
         token_limit=args.token_limit,
+        temperature=args.temperature,
     )
     
     # runner_log_dir = agent.cache_dir # Agent already sets its cache_dir, this can be removed or used for verification
