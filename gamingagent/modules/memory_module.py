@@ -20,7 +20,8 @@ class MemoryModule(CoreModule):
                 summary_system_prompt: str = "",
                 summary_prompt: str = "",
                 max_memory: int = 10,
-                token_limit: int = 100000, 
+                token_limit: int = 100000,
+                temperature: float = 1.0,
                 use_reflection: bool = True,
                 use_summary: bool = False,
                 vllm_url=None,
@@ -34,6 +35,7 @@ class MemoryModule(CoreModule):
             system_prompt=reflection_system_prompt,
             prompt=reflection_prompt,
             token_limit=token_limit,
+            temperature=temperature,
             cache_dir=cache_dir,
             vllm_url=vllm_url,
             modal_url=modal_url
@@ -107,6 +109,7 @@ class MemoryModule(CoreModule):
             thinking=False,
             reasoning_effort=self.reasoning_effort,
             token_limit=self.token_limit,
+            temperature=self.temperature,
         )
         # returned API response should be a tuple
         actual_raw_text = raw[0]
@@ -140,6 +143,7 @@ class MemoryModule(CoreModule):
                 thinking=False,
                 reasoning_effort=self.reasoning_effort,
                 token_limit=self.token_limit,
+                temperature=self.temperature,
             )
 
             # returned API response should be a tuple

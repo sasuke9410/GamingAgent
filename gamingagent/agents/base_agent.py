@@ -39,12 +39,13 @@ class BaseAgent(ABC):
             use_perception=True,
             use_summary=False,
             cache_dir=None,
-            custom_modules=None, 
+            custom_modules=None,
             observation_mode="vision",    # change the abstraction to with or without image
             scaffolding=None,
             vllm_url=None,
             modal_url=None,
             token_limit=100000,
+            temperature=1.0,
         ):
         """
         Initialize the agent with base parameters and modules.
@@ -81,6 +82,7 @@ class BaseAgent(ABC):
         self.observation_mode = observation_mode
         self.scaffolding = scaffolding
         self.token_limit = token_limit
+        self.temperature = temperature
 
         print(f"Initializing agent for game '{self.game_name}' with model '{self.model_name}'.")
         print(f"Harness mode: {'ON' if self.harness else 'OFF'}")
@@ -203,6 +205,7 @@ class BaseAgent(ABC):
             observation_mode=self.observation_mode,
             token_limit=self.token_limit,
             reasoning_effort="high",
+            temperature=self.temperature,
             vllm_url=self.vllm_url,
             modal_url=self.modal_url
         )
@@ -241,6 +244,7 @@ class BaseAgent(ABC):
                     summary_prompt=self.config["memory_module"].get("summary", {}).get("prompt", ""),
                     max_memory=self.max_memory,
                     token_limit=self.token_limit,
+                    temperature=self.temperature,
                     use_reflection=self.use_reflection,
                     use_summary=self.use_summary,
                     vllm_url=self.vllm_url,
@@ -256,6 +260,7 @@ class BaseAgent(ABC):
                     summary_prompt=self.config["memory_module"].get("summary", {}).get("prompt", ""),
                     max_memory=self.max_memory,
                     token_limit=self.token_limit,
+                    temperature=self.temperature,
                     use_reflection=self.use_reflection,
                     use_summary=self.use_summary,
                     vllm_url=self.vllm_url,
@@ -273,6 +278,7 @@ class BaseAgent(ABC):
                     system_prompt=self.config["reasoning_module"]["system_prompt"],
                     prompt=self.config["reasoning_module"]["prompt"],
                     token_limit=self.token_limit,
+                    temperature=self.temperature,
                     vllm_url=self.vllm_url,
                     modal_url=self.modal_url
                 )

@@ -1140,8 +1140,7 @@ class PokemonRedReader:
             mapped = text_table.get(byte)
             if mapped is not None:
                 result_chars.append(mapped)
-            else:
-                result_chars.append(f"[{byte:02X}]")
+            # Unmapped bytes are control characters — skip them silently
 
         return "".join(result_chars).strip()
 

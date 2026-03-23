@@ -328,20 +328,21 @@ class CoreModule(ABC):
     Provides common functionality for API calls, logging, and response parsing.
     """
     
-    def __init__(self, 
-                module_name, 
-                model_name="claude-3-7-sonnet-latest", 
-                system_prompt="", 
-                prompt="", 
+    def __init__(self,
+                module_name,
+                model_name="claude-3-7-sonnet-latest",
+                system_prompt="",
+                prompt="",
                 cache_dir="cache",
-                token_limit=100000, 
+                token_limit=100000,
                 reasoning_effort="high",
+                temperature=1.0,
                 vllm_url=None,
                 modal_url=None
         ):
         """
         Initialize the core module with basic parameters.
-        
+
         Args:
             module_name (str): Name of the module.
             model_name (str): The name of the model to use for inference.
@@ -350,6 +351,7 @@ class CoreModule(ABC):
             cache_dir (str): Directory for storing logs and cache files.
             token_limit (int): Maximum number of tokens for API calls.
             reasoning_effort (str): Reasoning effort for API calls (low, medium, high).
+            temperature (float): Sampling temperature for API calls (0.0-1.0).
         """
 
         print(f"core module token limit: {token_limit}")
@@ -360,6 +362,7 @@ class CoreModule(ABC):
         self.cache_dir = cache_dir
         self.token_limit = token_limit
         self.reasoning_effort = reasoning_effort
+        self.temperature = temperature
         
         # Initialize API manager
         self.api_manager = APIManager(
