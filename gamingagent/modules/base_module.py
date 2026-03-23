@@ -15,14 +15,15 @@ class BaseModule(CoreModule):
     the required abstract methods.
     """
     
-    def __init__(self, 
-                model_name="claude-3-7-sonnet-latest", 
+    def __init__(self,
+                model_name="claude-3-7-sonnet-latest",
                 observation_mode="vision",
                 cache_dir="cache",
-                system_prompt="", 
-                prompt="", 
-                token_limit=100000, 
+                system_prompt="",
+                prompt="",
+                token_limit=100000,
                 reasoning_effort="high",
+                temperature=1.0,
                 vllm_url=None,
                 modal_url=None
         ):
@@ -49,6 +50,7 @@ class BaseModule(CoreModule):
             cache_dir=cache_dir,
             token_limit=token_limit,
             reasoning_effort=reasoning_effort,
+            temperature=temperature,
             vllm_url=vllm_url,
             modal_url=modal_url
         )
@@ -133,19 +135,20 @@ class BaseModule(CoreModule):
             image_path=img_path,
             thinking=True,
             reasoning_effort=self.reasoning_effort,
-            token_limit=self.token_limit
+            token_limit=self.token_limit,
+            temperature=self.temperature
         )
-        
+
         return response
-    
+
     def _call_text_api(self, context, custom_prompt=None):
         """
         Call the text-only API with context.
-        
+
         Args:
             context (str): Formatted context with perception and memory data
             custom_prompt (str, optional): Custom prompt to use
-            
+
         Returns:
             str: Raw response from the API
         """
@@ -154,7 +157,7 @@ class BaseModule(CoreModule):
             user_prompt = context + "\n\n" + custom_prompt
         else:
             user_prompt = context
-        
+
         print(f"""
 ------------------------ TEXT API - FINAL USER PROMPT ------------------------
 {user_prompt}
@@ -167,7 +170,8 @@ class BaseModule(CoreModule):
             prompt=user_prompt,
             thinking=True,
             reasoning_effort=self.reasoning_effort,
-            token_limit=self.token_limit
+            token_limit=self.token_limit,
+            temperature=self.temperature
         )
         
         return response

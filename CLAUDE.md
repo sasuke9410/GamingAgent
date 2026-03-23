@@ -2,228 +2,181 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 一般的なコマンド
+## 環境セットアップと起動手順
 
-### 環境セットアップ
+### Windows（uv） — Gymnasium系ゲーム用
+
+| 対応ゲーム | 非対応 |
+|-----------|--------|
+| Pokemon Red / 2048 / Sokoban / Tetris / Candy Crush / Doom / TicTacToe / TexasHoldem | Ace Attorney / Super Mario Bros（stable-retro 非対応） |
+
 ```bash
-# 依存関係のインストール
-pip install -e .
+# 初回セットアップ（.venv は既存）
+uv sync
 
-# API キーの設定
-source credentials.sh
+# 起動
+.venv\Scripts\activate          # Windows PowerShell/CMD
+source .venv/Scripts/activate   # Git Bash / この環境
+
+source credentials.sh           # APIキー設定
+
+# 例: Pokemon Red
+python lmgame-bench/single_agent_runner.py \
+  --game_name pokemon_red \
+  --model_name gemini-2.0-flash \
+  --config_root_dir gamingagent/configs \
+  --harness
 ```
+
+### WSL2（~/lmgame-venv） — Retro系ゲームを含む全ゲーム用
+
+| 対応ゲーム |
+|-----------|
+| 全ゲーム（Ace Attorney / Super Mario Bros を含む） |
+
+```bash
+# 初回セットアップ（初回のみ）
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.bashrc
+
+# シンボリックリンク（Windowsとソース共有）
+ln -sfn /mnt/c/Users/sasuke/Documents/GamingAgent ~/GamingAgent
+
+# venv作成（system-site-packages でstable-retroを取り込む）
+uv venv ~/lmgame-venv --python 3.12 --system-site-packages
+UV_LINK_MODE=copy uv pip install --python ~/lmgame-venv/bin/python \
+    anthropic==0.49.0 openai google-generativeai==0.8.4 google-genai==1.5.0 \
+    numpy pyyaml "gymnasium>=0.29" pyboy pillow tiktoken together \
+    psutil pettingzoo opencv-python-headless aiohttp pyglet
+UV_LINK_MODE=copy uv pip install --python ~/lmgame-venv/bin/python \
+    -e /mnt/c/Users/sasuke/Documents/GamingAgent --no-deps
+
+# 起動（毎回）
+source ~/lmgame-venv/bin/activate
+cd ~/GamingAgent
+source /mnt/c/Users/sasuke/Documents/GamingAgent/credentials.sh
+
+# 例: Ace Attorney
+python lmgame-bench/single_agent_runner.py \
+  --game_name ace_attorney \
+  --model_name gemini-2.5-flash-preview-04-17 \
+  --config_root_dir gamingagent/configs \
+  --harness
+
+# 例: Super Mario Bros
+python lmgame-bench/single_agent_runner.py \
+  --game_name super_mario_bros \
+  --model_name gemini-2.0-flash \
+  --config_root_dir gamingagent/configs
+```
+
+> **WSL2 ディスプレイ**: Windows 11 の WSLg が自動的に `DISPLAY=:0` を設定するため通常は追加設定不要。
 
 ### 評価実行
 ```bash
-# 単一モデル・単一ゲームの評価
+# 単一ゲーム・単一モデル
 python3 lmgame-bench/single_agent_runner.py --game_name sokoban --model_name claude-3-5-sonnet --config_root_dir gamingagent/configs
 
-# 複数ゲームでの評価（並列実行）
+# ハーネスあり（認知モジュールパイプライン使用）
+python3 lmgame-bench/single_agent_runner.py --game_name sokoban --model_name claude-3-5-sonnet --config_root_dir gamingagent/configs --harness
+
+# 複数ゲーム並列評価
 python3 lmgame-bench/run.py --model_name claude-3-5-sonnet --game_names sokoban,tetris,candy_crush,twenty_forty_eight --harness_mode both
 
-# 全モデルの評価
+# 全モデル評価
 bash lmgame-bench/evaluate_all.sh
 ```
 
-### テスト実行
+### テスト
 ```bash
-# 基本テスト
 python tests/test_run.py
-
-# Pokemon Red環境テスト
 python tests/pokemon_red_test/test_game_env.py
 ```
 
-## アーキテクチャ概要
+### ゲームリプレイ動画生成
+```bash
+python eval/video_generation_script.py --agent_config_path [CONFIG_PATH] --episode_log_path [LOG_PATH] --method text --output_path [OUTPUT_NAME] --fps 2
+```
 
-### 主要コンポーネント
+### LLM Studio接続確認
+```bash
+curl http://localhost:1234/v1/models
+```
 
-1. **GamingAgent Framework** (`gamingagent/`)
-   - **Agents** (`agents/`): `BaseAgent`を継承したゲーム固有のエージェント実装
-   - **Modules** (`modules/`): モジュラー設計による認知アーキテクチャ
-     - `BaseModule`: 直接的な観察→行動変換
-     - `PerceptionModule`: 視覚・テキスト観察の処理
-     - `MemoryModule`: エピソード記憶管理
-     - `ReasoningModule`: 推論と行動決定
-   - **Environments** (`envs/`): ゲーム環境のGym/Retroインターフェース実装
+## アーキテクチャ
 
-2. **LMGame Bench** (`lmgame-bench/`)
-   - **評価フレームワーク**: モデル性能のベンチマーク
-   - **並列実行エンジン**: 複数のゲーム/モデル組み合わせの効率的評価
+### 2つの実行モード
 
-3. **Computer Use** (`computer_use/`)
-   - **実時間ゲーミング**: PC/ラップトップでの実時間エージェント実行
+**Harness Mode** (`--harness`): Perception → Memory → Reasoning の3段階認知パイプライン。過去のゲーム状態を記憶し、反省・推論を行う高度なエージェント動作。
+
+**Base Mode** (デフォルト): 観察を直接行動に変換する単純モード。ベンチマーク評価に適している。
+
+### モジュール構成 (`gamingagent/modules/`)
+
+| モジュール | ファイル | 役割 |
+|----------|--------|-----|
+| CoreModule | `core_module.py` | LLM推論インターフェース基底クラス、`GameTrajectory`・`Observation`データクラス定義 |
+| BaseModule | `base_module.py` | 観察→行動の直接変換（Base Mode用） |
+| PerceptionModule | `perception_module.py` | 視覚・テキスト観察の処理とゲーム状態抽出 |
+| MemoryModule | `memory_module.py` | エピソード記憶管理・反省生成 |
+| ReasoningModule | `reasoning_module.py` | 戦略的意思決定・行動計画 |
 
 ### 設定システム
 
-- **ゲーム設定**: `gamingagent/configs/{game_name}/config.yaml`
-  - 環境パラメータ（max_steps、num_runs等）
-  - エージェント設定（model_name、harness、observation_mode等）
-  - モジュール固有設定（memory容量、推論設定等）
+各ゲームは `gamingagent/configs/{game_name}/` に2ファイルを持つ：
+- **`config.yaml`**: 環境パラメータ（max_steps, num_runs）、エージェント設定（model_name, observation_mode, harness）
+- **`module_prompts.json`**: 各認知モジュール用のsystem/userプロンプトテンプレート
 
-- **プロンプト管理**: `gamingagent/configs/{game_name}/module_prompts.json`
+### 観察モード
 
-### サポートされるゲーム
+- `observation_mode: "vision"` → 画像のみ（マルチモーダルモデル必須）
+- `observation_mode: "text"` → テキストのみ（Sokoban、2048、Tetris等）
+- `observation_mode: "vision_text"` → 画像＋テキスト（マルチモーダルモデル必須）
 
-**Gymnasium環境**:
-- 2048 (`custom_01_2048`)
-- Sokoban (`custom_02_sokoban`)
-- Candy Crush (`custom_03_candy_crush`)
-- Tetris (`custom_04_tetris`)
-- Pokemon Red (`custom_06_pokemon_red`) - ROM必須
-- Doom (`custom_05_doom`)
+### サポートゲーム
 
-**Retro環境**:
-- Super Mario Bros (`retro_01_super_mario_bros`)
-- Ace Attorney (`retro_02_ace_attorney`)
+**Gymnasium環境** (`gamingagent/envs/custom_*/`):
+- `custom_01_2048`, `custom_02_sokoban`, `custom_03_candy_crush`, `custom_04_tetris`
+- `custom_05_doom`, `custom_06_pokemon_red`（ROMファイル必須）
 
-**マルチエージェント**:
-- Tic Tac Toe (`zoo_01_tictactoe`)
-- Texas Hold'em (`zoo_02_texasholdem`)
+**Retro環境** (`gamingagent/envs/retro_*/`):
+- `retro_01_super_mario_bros`（stable-retroのインポート必要）
+- `retro_02_ace_attorney`（ROMを`envs/retro_02_ace_attorney/AceAttorney-GbAdvance/`に配置）
 
-### モデルサポート
+**マルチエージェント** (`gamingagent/envs/zoo_*/`):
+- `zoo_01_tictactoe`, `zoo_02_texasholdem`
 
-**クラウドモデル**:
-OpenAI (o4-mini, o3, gpt-4o)、Anthropic (Claude-4, Claude-3.5)、Gemini (2.5-pro, 2.0-flash)、xAI (grok-3-mini)、Deepseek (reasoner, chat)に対応。API設定は`credentials.sh`で管理。
+### APIとモデルサポート (`tools/serving/`)
+
+`api_manager.py` が全APIプロバイダーを統一管理。コスト計算・トークンカウント・ログ記録も担当。
+
+**クラウドモデル**: OpenAI (o4-mini, o3, gpt-4o)、Anthropic (claude-4系, claude-3-5系)、Gemini (2.5-pro, 2.0-flash)、xAI (grok-3-mini)、Deepseek (R1, V3)
 
 **ローカルモデル**:
-- **LLM Studio**: `llm-studio-{model_name}`形式でサポート（例: `llm-studio-Qwen/Qwen2.5-VL-32B-Instruct`）
-- **vLLM**: `vllm-{model_name}`形式でサポート
-- **Modal**: `modal-{model_name}`形式でサポート
+- LLM Studio: `llm-studio-{model_name}`（例: `llm-studio-Qwen/Qwen2.5-VL-32B-Instruct`）
+- vLLM: `vllm-{model_name}`
+- Modal: `modal-{model_name}`
 
-### マルチモーダル要件
+APIキーは`credentials.sh`で管理（`source credentials.sh`で読み込み）。
 
-**マルチモーダルモデルが必要な場合**:
-- `observation_mode: "vision"` - 画像のみの観察
-- `observation_mode: "vision_text"` - 画像＋テキストの観察
-- ゲーム画面キャプチャを処理する必要がある場合
+### キャッシュとログ
 
-**テキストのみモデルで十分な場合**:
-- `observation_mode: "text"` - テキストのみの観察
-- ゲーム状態がテキストで完全に表現できる場合（Sokoban、2048、Tetris等）
+実行結果は `cache/{game_name}/{model_name}/{timestamp}/` に保存（JSONL形式のエピソードログ、画像、APIレスポンス）。評価ログは `logs/` に出力。
 
-### LLM Studioローカルモデル設定
-
-```python
-# APIManagerでLLM Studio設定
-api_manager = APIManager(
-    game_name="sokoban",
-    llm_studio_host="localhost",  # LLM Studioサーバーホスト
-    llm_studio_port=1234,         # LLM Studioサーバーポート
-    llm_studio_api_key="not-needed"  # APIキー（通常不要）
-)
-
-# モデル名の指定
-model_name = "llm-studio-Qwen/Qwen2.5-VL-32B-Instruct"  # マルチモーダル対応
-# または
-model_name = "llm-studio-Qwen/Qwen2.5-32B-Instruct"     # テキストのみ
-```
-
-### 重要な設計パターン
-
-- **Harness Mode**: `harness=true`で認知モジュールパイプライン使用、`false`で直接的な基本モジュール使用
-- **Observation Mode**: `"vision"`（画像ベース）または`"text"`（テキストベース）
-- **キャッシュシステム**: `cache_dir`での実行結果とモデル応答の保存
-- **並列評価**: ProcessPoolExecutorによる効率的なベンチマーク実行
-
-### 新しいゲームの追加
-
-1. `gamingagent/envs/`に環境実装を追加
-2. `gamingagent/configs/`に設定ファイルを作成
-3. 必要に応じてROMファイルを指定ディレクトリに配置（Pokemon Red、Ace Attorney等）
-
-### ROHファイル要件
+## ROMファイル要件
 
 - **Pokemon Red**: `gamingagent/configs/custom_06_pokemon_red/rom/pokemon.gb`
 - **Ace Attorney**: `gamingagent/envs/retro_02_ace_attorney/AceAttorney-GbAdvance/`
 
-### LLM Studioローカルモデル使用例
+## 新ゲームの追加手順
 
-```bash
-# LLM Studioサーバーを起動（ポート1234）
-# マルチモーダルモデルで評価
-python3 lmgame-bench/single_agent_runner.py \
-  --game_name sokoban \
-  --model_name llm-studio-Qwen/Qwen2.5-VL-32B-Instruct \
-  --config_root_dir gamingagent/configs \
-  --harness
-
-# テキストのみモデルで評価
-python3 lmgame-bench/single_agent_runner.py \
-  --game_name twenty_forty_eight \
-  --model_name llm-studio-Qwen/Qwen2.5-32B-Instruct \
-  --config_root_dir gamingagent/configs
-```
-
-### ローカルモデル設定のデバッグ
-
-```bash
-# LLM Studioサーバーが正常に動作しているか確認
-curl http://localhost:1234/v1/models
-
-# APIManagerでの接続テスト
-python3 -c "
-from tools.serving import APIManager
-api = APIManager('test', llm_studio_host='localhost', llm_studio_port=1234)
-result, costs = api.text_only_completion(
-    'llm-studio-your-model-name',
-    'You are a helpful assistant.',
-    'Hello, how are you?'
-)
-print(result)
-"
-```
-
-### 注意事項
-
-- LLM Studio使用時は事前にサーバーが起動していることを確認
-- マルチモーダルゲーム（Pokemon Red、Super Mario Bros等）では必ずマルチモーダル対応モデルを使用
-- テキストのみゲーム（2048、Sokoban、Tetris等）では軽量なテキストモデルの使用を推奨
-- ローカルモデルの推論速度がクラウドAPIより遅い場合があるため、`token_limit`を適切に調整
+1. `gamingagent/envs/` に環境クラスを実装（Gymnasium準拠インターフェース）
+2. `gamingagent/configs/{new_game}/config.yaml` と `module_prompts.json` を作成
+3. `lmgame-bench/single_agent_runner.py` のゲーム名マッピングに追加
 
 ## 改善管理
 
-### 改善項目の管理
-プロジェクトの改善項目・課題・TODOは **`IMPROVEMENTS.md`** で一元管理しています。
-
-**主な改善項目**:
+進行中の課題・改善項目は **`IMPROVEMENTS.md`** で管理。
 - Pokemon Red: エージェント思考言語の統一化（優先度：高）
-- Pokemon Red: UI操作理解の強化（名前入力画面等）（優先度：高）
-- Pokemon Red: ROM制御文字のフィルタリング（優先度：中）
+- Pokemon Red: UI操作理解の強化（優先度：高）
 - Ace Attorney: stable-retroインストール自動化（優先度：高）
-
-詳細は [`IMPROVEMENTS.md`](IMPROVEMENTS.md) を参照してください。
-
-### 改善実施時のワークフロー
-
-1. **課題発見時**:
-   ```bash
-   # IMPROVEMENTS.mdに新しい課題を追加
-   # 優先度、影響範囲、解決策を記載
-   ```
-
-2. **改善実施時**:
-   ```bash
-   # ステータスを「🟡 対応中」に更新
-   # 実装後、ステータスを「🟢 完了」に更新
-   # 実装詳細と結果を記録
-   ```
-
-3. **定期レビュー**:
-   ```bash
-   # 月次で優先度を見直し
-   # 完了項目のアーカイブ
-   ```
-
-### 分析レポート
-
-**Pokemon Red 日本語ステータス分析**:
-- 詳細レポート: `pokemon_japanese_status_report.md`
-- ステータスログ: `pokemon_status_analysis.txt`
-- 実行ログ: `cache/pokemon_red/llm_studio_qwen/{timestamp}/episode_001_log.jsonl`
-
-これらのレポートには以下が含まれます:
-- 日本語ダイアログ処理の精度評価
-- ゲームステータス取得の正確性検証
-- エージェントの認知・行動パターン分析
-- メモリモジュールの記録内容確認

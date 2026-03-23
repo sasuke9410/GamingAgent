@@ -13,6 +13,7 @@ agent:
   cache_dir: "cache/pokemon_red" # Base cache directory for this agent/game
   reasoning_effort: "high" # Example, if your agent uses this
   token_limit: 1500        # Conservative setting for 4096 token context limit
+  temperature: 0.3         # Low temperature for consistent Japanese language output
   harness: true        # Enable harness mode to use perception/reasoning modules
   observation_mode: "vision"  # Vision only for stability
   use_reflection: false    # Disabled for initial stability
