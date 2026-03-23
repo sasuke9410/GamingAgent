@@ -20,12 +20,21 @@ source .venv/Scripts/activate   # Git Bash / この環境
 
 source credentials.sh           # APIキー設定
 
-# 例: Pokemon Red
+# 例: Pokemon Red（クラウドモデル）
 python lmgame-bench/single_agent_runner.py \
   --game_name pokemon_red \
   --model_name gemini-2.0-flash \
   --config_root_dir gamingagent/configs \
   --harness
+
+# 例: Pokemon Red（ローカルLLM / LM Studio）
+# ※ローカルモデルは --prompts_file module_prompts_local_llm.json が必須
+python lmgame-bench/single_agent_runner.py \
+  --game_name pokemon_red \
+  --model_name llm-studio-qwen/qwen2.5-vl-7b-instruct \
+  --config_root_dir gamingagent/configs \
+  --harness \
+  --prompts_file module_prompts_local_llm.json
 ```
 
 ### WSL2（~/lmgame-venv） — Retro系ゲームを含む全ゲーム用
