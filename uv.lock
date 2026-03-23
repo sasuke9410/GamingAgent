@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'darwin'",
@@ -463,7 +463,6 @@ dependencies = [
     { name = "pygame" },
     { name = "pygetwindow" },
     { name = "pyyaml" },
-    { name = "stable-retro" },
     { name = "tiktoken" },
     { name = "tile-match-gym" },
     { name = "together" },
@@ -492,7 +491,6 @@ requires-dist = [
     { name = "pygame", specifier = "==2.6.1" },
     { name = "pygetwindow", specifier = "==0.0.9" },
     { name = "pyyaml", specifier = "==6.0.2" },
-    { name = "stable-retro" },
     { name = "tiktoken" },
     { name = "tile-match-gym" },
     { name = "together" },
@@ -1762,15 +1760,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e1/70/c7a4f46dbf06048c6d57d9489b8e0f9c4c3d36b7479f03c5ca97eaa2541d/PyGetWindow-0.0.9.tar.gz", hash = "sha256:17894355e7d2b305cd832d717708384017c1698a90ce24f6f7fbf0242dd0a688", size = 9699, upload-time = "2020-10-04T02:12:50.806Z" }
 
 [[package]]
-name = "pyglet"
-version = "1.5.31"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f7/c0/59130a7edbcc8f84e35870b00a712538ca05415ff02d17181277b8ef8f05/pyglet-1.5.31.zip", hash = "sha256:a5e422b4c27b0fc99e92103bf493109cca5c18143583b868b3b4631a98ae9417", size = 6900712, upload-time = "2024-12-24T07:10:58.022Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/43/46aa0ab49f2f5145d201780c7595cf0c305fb4fb5d00d6639792a3d0e770/pyglet-1.5.31-py3-none-any.whl", hash = "sha256:f68413564bbec380e4815898fef0fb7a4a494dc3f8718bfbf28ce2a802634c88", size = 1143660, upload-time = "2024-12-24T07:10:50.769Z" },
-]
-
-[[package]]
 name = "pygments"
 version = "2.19.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1808,7 +1797,7 @@ name = "pyobjc-framework-cocoa"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4b/c5/7a866d24bc026f79239b74d05e2cf3088b03263da66d53d1b4cf5207f5ae/pyobjc_framework_cocoa-11.1.tar.gz", hash = "sha256:87df76b9b73e7ca699a828ff112564b59251bb9bbe72e610e670a4dc9940d038", size = 5565335, upload-time = "2025-06-14T20:56:59.683Z" }
 wheels = [
@@ -1826,8 +1815,8 @@ name = "pyobjc-framework-quartz"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c7/ac/6308fec6c9ffeda9942fef72724f4094c6df4933560f512e63eac37ebd30/pyobjc_framework_quartz-11.1.tar.gz", hash = "sha256:a57f35ccfc22ad48c87c5932818e583777ff7276605fef6afad0ac0741169f75", size = 3953275, upload-time = "2025-06-14T20:58:17.924Z" }
 wheels = [
@@ -2126,25 +2115,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e041b6ae58d80074f81b7d5121207425c964ddf5cfdbd/sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc", size = 20372, upload-time = "2024-02-25T23:20:04.057Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235, upload-time = "2024-02-25T23:20:01.196Z" },
-]
-
-[[package]]
-name = "stable-retro"
-version = "0.9.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "farama-notifications" },
-    { name = "gymnasium" },
-    { name = "pyglet" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/27/58d7da779d45dac3c98571fec001b269ba40f99b008a749c9ccace5b9f15/stable_retro-0.9.5.tar.gz", hash = "sha256:736741d19a091efd5b12b164a2f6b4bda562147bb96751f629bedd1551cefb97", size = 112223924, upload-time = "2025-05-22T03:19:08.068Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/36/bffeea7375f0b104da2f3c88b7fecda520e34e26fb27646ef7835fa77b6b/stable_retro-0.9.5-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:740756a395d912ab3438f3a1814057150425fe3ad3c948a3065903473235563f", size = 86914499, upload-time = "2025-05-22T03:18:11.034Z" },
-    { url = "https://files.pythonhosted.org/packages/47/ec/b868d18ccf2d14750a36a7557525e952cf2a4b43da83df1b4175027e1786/stable_retro-0.9.5-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:087d510e33dc4928c6d6d3339291f3beab0503d5cae58237e8f28f43343679ff", size = 96366358, upload-time = "2025-05-22T03:18:18.673Z" },
-    { url = "https://files.pythonhosted.org/packages/c7/39/33f46b336e5634a08fc5e2a6addb1a9f219ba5b3d6b0caa154bd0d9133d6/stable_retro-0.9.5-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:0a24eedddf789da9700f7a12fd34e6885839dd030cb599bab576ef793663c0f1", size = 86915540, upload-time = "2025-05-22T03:18:23.914Z" },
-    { url = "https://files.pythonhosted.org/packages/8a/27/647aae53b7156f8ecaf132d1ba89d2d84177bd80d03af364b83a7d300e0b/stable_retro-0.9.5-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:a7f53061eb598b5d482f5403cbe89feab7064679f36796dcb08a2a4a9142c3c0", size = 96384715, upload-time = "2025-05-22T03:18:28.92Z" },
-    { url = "https://files.pythonhosted.org/packages/3a/53/93bdb2d68b6e340f4d36ade311764f84ce846913430af79ee62417556b95/stable_retro-0.9.5-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:59129ad98c0104df4c6d7abfc3a1842679dfc9d4a34ce373b7993904bfe64f36", size = 86920197, upload-time = "2025-05-22T03:18:34.038Z" },
-    { url = "https://files.pythonhosted.org/packages/10/ee/a36f10e287d0a0746787799a7493d66cb2dc90af8c4296effa1919034e9b/stable_retro-0.9.5-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:6d2a1bc8bcbf750187c97fb5f35c3fa08e1b20e3748f80dc5a7197a4db33b6c2", size = 96373503, upload-time = "2025-05-22T03:18:39.333Z" },
 ]
 
 [[package]]

@@ -9,6 +9,7 @@ from typing import Any
 import sys
 import re
 import random
+import threading
 
 import gymnasium as gym
 
@@ -522,12 +523,29 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
             print(f"[LogWindow] Failed to start: {_lw_err}")
             log_win = None
 
+    # Fix 1: Wait for both game window and monitor window to be fully visible
+    # before starting the first action step.
+    print("[Runner] Waiting for windows to initialize...")
+    for _ in range(30):  # 3 seconds: pump game events while waiting
+        game_env.render()
+        time.sleep(0.1)
+    print("[Runner] Windows ready. Starting game loop.")
+
     for step_num in range(args.max_steps_per_episode):
         final_step_num = step_num + 1
-        game_env.render() # Call env's render method directly
 
+        # Fix 2: Run LLM inference in a background thread while the main thread
+        # pumps SDL2/game events, preventing "not responding" on the game window.
         start_time = time.time()
-        action_dict, processed_agent_observation = agent.get_action(agent_observation)
+        _action_result: dict = {}
+        def _get_action_worker():
+            _action_result['value'] = agent.get_action(agent_observation)
+        _action_thread = threading.Thread(target=_get_action_worker, daemon=True)
+        _action_thread.start()
+        while _action_thread.is_alive():
+            game_env.render()
+            _action_thread.join(timeout=0.05)
+        action_dict, processed_agent_observation = _action_result['value']
         end_time = time.time()
         time_taken_s = end_time - start_time
         # Special handling for Doom game
