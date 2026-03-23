@@ -84,7 +84,11 @@ class ReasoningModule(CoreModule):
         
         # Get the description of visual elements from perception module
         processed_visual_description = getattr(observation, "processed_visual_description", "")
-        
+        # Truncate to avoid context overflow on small-context local models
+        if processed_visual_description and len(processed_visual_description) > 500:
+            processed_visual_description = processed_visual_description[:500]
+            observation.processed_visual_description = processed_visual_description
+
         # Extract game trajectory and reflection memory module
         game_trajectory = getattr(observation, "game_trajectory", "")
         reflection = getattr(observation, "reflection", "")
