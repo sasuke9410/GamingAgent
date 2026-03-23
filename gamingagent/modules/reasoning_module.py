@@ -240,7 +240,9 @@ class ReasoningModule(CoreModule):
         # Find action section using regex (case insensitive)
         action_match = re.search(action_pattern, response.replace('#', '').replace('`', '').replace('\"', '').replace('*', ''), re.DOTALL | re.IGNORECASE)
         if action_match:
-            result["action"] = action_match.group(1).strip()
+            # Take only the FIRST line — models sometimes append "reason:" or
+            # explanatory text on subsequent lines which makes the action invalid.
+            result["action"] = action_match.group(1).strip().split('\n')[0].strip()
         
         # If no structured format was found, treat the whole response as thought
         if not result["thought"] and not result["action"]:
