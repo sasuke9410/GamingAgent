@@ -434,18 +434,22 @@ class PokemonRedEnv(Env):
         fast_a(50, wait_frames=80)
 
         # ── Phase 2: Player name input ──────────────────────────────────────
-        # Cursor is at 'ア' (row 0, col 0).  Buffer is full (ア×7).
-        # おわり is the rightmost entry in row 0: right × 9 from col 0.
+        # Cursor is at 'ア' (row 0, col 0).  Buffer may have ア×N typed.
+        # Delete all typed characters with B (cursor stays at ア; no-op if buffer empty).
+        fast_btn("b", 7, wait_frames=30)   # clear up to 7 chars → empty buffer
+        # Navigate to おわり: rightmost entry in row 0 (right × 9 from col 0).
+        # Empty buffer + おわり → game assigns default name (レッド / RED).
         fast_btn("right", 9, wait_frames=15)
-        fast_a(1, wait_frames=120)   # Confirm おわり
+        fast_a(1, wait_frames=120)   # Confirm おわり → default player name
         self.tick(120)
 
         # ── Phase 3: More Oak dialog after player name (rival intro) ────────
         fast_a(35, wait_frames=80)
 
         # ── Phase 4: Rival name input ───────────────────────────────────────
+        fast_btn("b", 7, wait_frames=30)   # clear up to 7 chars → empty buffer
         fast_btn("right", 9, wait_frames=15)
-        fast_a(1, wait_frames=120)   # Confirm おわり
+        fast_a(1, wait_frames=120)   # Confirm おわり → default rival name
         self.tick(120)
 
         # ── Phase 5: Final dialog until player spawns in room ───────────────
