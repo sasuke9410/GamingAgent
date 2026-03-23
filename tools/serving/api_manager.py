@@ -1081,7 +1081,6 @@ class APIManager:
             thinking=thinking,
             reasoning_effort=reasoning_effort,
             token_limit=token_limit,
-            url=self.modal_url
         )
     
     def multi_image_completion(

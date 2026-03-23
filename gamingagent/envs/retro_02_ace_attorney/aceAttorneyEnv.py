@@ -230,8 +230,14 @@ class AceAttorneyEnv(gym.Env):
         if LIVES_RAM_VARIABLE_NAME and LIVES_RAM_VARIABLE_NAME in core_info:
             new_lives_value = int(core_info[LIVES_RAM_VARIABLE_NAME])
             if new_lives_value != self.current_lives:
-                #print(f"[AceAttorneyEnv DEBUG] Lives changed from {self.current_lives} to {new_lives_value}. RAM Variable: '{LIVES_RAM_VARIABLE_NAME}', Value in RAM: {core_info[LIVES_RAM_VARIABLE_NAME]}")
-                self.current_lives = new_lives_value
+                # Only accept lives update if:
+                # - new value is positive (RAM shows real penalty count), OR
+                # - current lives already dropped below initial (tracking a real penalty sequence)
+                # This prevents the lives RAM address (which reads 0 during normal play)
+                # from triggering immediate game-over at the start of an episode.
+                if new_lives_value > 0 or self.current_lives < self.initial_lives:
+                    #print(f"[AceAttorneyEnv DEBUG] Lives changed from {self.current_lives} to {new_lives_value}. RAM Variable: '{LIVES_RAM_VARIABLE_NAME}', Value in RAM: {core_info[LIVES_RAM_VARIABLE_NAME]}")
+                    self.current_lives = new_lives_value
 
     def _get_agent_info(self) -> Dict[str, Any]:
         score = self.current_core_info.get("score", 0)

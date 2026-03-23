@@ -534,7 +534,7 @@ class PokemonRedEnv(Env):
                                 elif (location, (real_col, real_row)) in past_locations:
                                     tile_label += "\n" + "RECENTLY\nVISITED"
                                 else:
-                                    tile_label += "\n" + "CHECK\nHERE"
+                                    tile_label += "\n" + "UNEXPLORED"
                         else:
                             # ImageDraw.Draw(screenshot).rectangle(((col * tile_size + (relative_square_size - 1)*mid_length/relative_square_size, row * tile_size + (relative_square_size - 1)*mid_length/relative_square_size), (col * tile_size + (relative_square_size + 1)*mid_length/relative_square_size, row * tile_size + (relative_square_size + 1)*mid_length/relative_square_size)), (255, 0, 255))
                             tile_label += "\n" + "NPC/OBJECT"

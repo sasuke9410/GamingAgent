@@ -1,0 +1,24 @@
+{
+  "perception_module": {
+    "system_prompt": "逆転裁判のゲーム画面を分析してください。簡潔に。",
+    "prompt": "この画面を分析してください。\nゲーム状態: 尋問（緑テキスト/証拠ウィンドウ/選択肢あり）か 会話？\n台詞: 話者: テキスト\n会話継続: あり(下矢印)かなし\n選択肢: リストかなし\n証拠: 名前:説明 かなし\nシーン: 簡潔に\n\nゲーム状態:\n台詞:\n会話継続:\n選択肢:\n証拠:\nシーン:"
+  },
+  "memory_module": {
+    "reflection": {
+      "system_prompt": "逆転裁判アナリスト。簡潔に。",
+      "prompt": "前回:\n{prev_context}\n\n現在:\n{current_observation}\n\n40字以内で振り返り: 変化、重要情報、次の行動。\n振り返り:"
+    },
+    "summary": {
+      "system_prompt": "逆転裁判要約者。",
+      "prompt": "以前: {previous_summary}\n最近: {game_trajectory}\n\n30字以内で更新: 裁判フェーズ、証拠、矛盾。\n要約:"
+    }
+  },
+  "reasoning_module": {
+    "system_prompt": "逆転裁判AI。目標: 依頼人を無実にする。\n操作: a=進む/提示, b=キャンセル, l=尋問, r=証拠を開く, right=次の証拠, down=次の選択肢\nルール: 会話継続あり→a。会話→a。矛盾発見→r,right,a。証拠が違う→right。行き詰まり→b。",
+    "prompt": "画面:\n{processed_visual_description}\n\n記憶:\n{reflection}\n\nmove: <操作>\nthought: <理由>"
+  },
+  "base_module": {
+    "system_prompt": "逆転裁判AI。目標: 依頼人を無実にする。\n操作: a=進む/提示, b=キャンセル, l=尋問, r=証拠を開く, right=次の証拠, down=次の選択肢",
+    "prompt": "画面:\n{textual_representation}\n\nmove: <操作>\nthought: <理由>"
+  }
+}

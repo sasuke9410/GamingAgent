@@ -40,7 +40,11 @@ except ImportError:
     print("Warning: CandyCrush environment not available")
     CandyCrushEnv = None
 from gamingagent.envs.custom_04_tetris.tetrisEnv import TetrisEnv
-from gamingagent.envs.custom_05_doom.doomEnv import DoomEnvWrapper
+try:
+    from gamingagent.envs.custom_05_doom.doomEnv import DoomEnvWrapper
+except ImportError:
+    print("Warning: Doom environment not available")
+    DoomEnvWrapper = None
 from gamingagent.envs.custom_06_pokemon_red.pokemonRedEnv import PokemonRedEnv
 
 try:
@@ -510,11 +514,12 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
     if LogWindow is not None:
         try:
             log_win = LogWindow(
-                title=f"Agent Monitor — E{episode_id}",
+                title=f"エージェントモニター — エピソード{episode_id}",
                 x_offset=530, y_offset=0,
+                game_name=args.game_name,
             )
             log_win.start()
-            log_win.log_message(f"Episode {episode_id} started  [{args.game_name}]")
+            log_win.log_message(f"エピソード {episode_id} 開始  [{args.game_name}]")
         except Exception as _lw_err:
             print(f"[LogWindow] Failed to start: {_lw_err}")
             log_win = None
@@ -545,18 +550,25 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
         # pumps SDL2/game events, preventing "not responding" on the game window.
         start_time = time.time()
         _action_result: dict = {}
+        _action_exception: list = []
         def _get_action_worker():
-            _action_result['value'] = agent.get_action(agent_observation)
+            try:
+                _action_result['value'] = agent.get_action(agent_observation)
+            except Exception as _e:
+                _action_exception.append(_e)
+                _action_result['value'] = ({"action": None, "thought": f"エラー: {_e}"}, agent_observation)
         _action_thread = threading.Thread(target=_get_action_worker, daemon=True)
         _action_thread.start()
         while _action_thread.is_alive():
             _pump_game_events()
             _action_thread.join(timeout=0.5)
-        action_dict, processed_agent_observation = _action_result['value']
+        if _action_exception:
+            print(f"[Runner] Action worker exception: {_action_exception[0]}")
+        action_dict, processed_agent_observation = _action_result.get('value', ({"action": None, "thought": "No result"}, agent_observation))
         end_time = time.time()
         time_taken_s = end_time - start_time
         # Special handling for Doom game
-        if isinstance(game_env, DoomEnvWrapper):
+        if DoomEnvWrapper is not None and isinstance(game_env, DoomEnvWrapper):
             # Handle action like test file
             if action_dict and action_dict.get("action") is not None:
                 action_str = str(action_dict.get("action")).strip().lower()
@@ -629,7 +641,7 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
         # ── Update log window ─────────────────────────────────────────────
         if log_win is not None:
             try:
-                _action_for_log = action_str_agent if not isinstance(game_env, DoomEnvWrapper) else action_str
+                _action_for_log = action_str_agent if (DoomEnvWrapper is None or not isinstance(game_env, DoomEnvWrapper)) else action_str
                 _state_for_log  = getattr(processed_agent_observation, "textual_representation", "") or ""
                 log_win.log_step(
                     step=final_step_num,
@@ -650,7 +662,7 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
     # ── Close log window ──────────────────────────────────────────────────────
     if log_win is not None:
         try:
-            log_win.log_message(f"Episode {episode_id} finished after {final_step_num} steps.")
+            log_win.log_message(f"エピソード {episode_id} が {final_step_num} ステップで終了しました。")
             time.sleep(0.3)
             log_win.close()
         except Exception:

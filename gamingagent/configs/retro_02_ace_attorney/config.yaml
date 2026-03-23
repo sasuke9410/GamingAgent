@@ -2,9 +2,9 @@ game_env:
   name: "ace_attorney"
   description: "Ace Attorney game environment using retro.Env and GymEnvAdapter."
   env_type: "retro"
-  max_steps: 300
+  max_steps: 20
   seed: null
-  num_runs: 1
+  num_runs: 5
 
 agent:
   name: "ace_attorney_retro_agent"
@@ -19,7 +19,7 @@ agent:
     perception_module: 
 
     memory_module:
-      max_memory: 10
+      max_memory: 2
     
     reasoning_module:
       use_perception: True

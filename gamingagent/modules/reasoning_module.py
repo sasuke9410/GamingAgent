@@ -165,18 +165,21 @@ class ReasoningModule(CoreModule):
         print("------------------------ END FINAL USER PROMPT ------------------------")
         
         # Call the vision-text API
-        response = self.api_manager.vision_text_completion(
-            model_name=self.model_name,
-            system_prompt=self.system_prompt,
-            prompt=user_prompt,
-            image_path=image_path,
-            thinking=True,
-            reasoning_effort=self.reasoning_effort,
-            token_limit=self.token_limit,
-            temperature=self.temperature,
-        )
-
-        return response
+        try:
+            response = self.api_manager.vision_text_completion(
+                model_name=self.model_name,
+                system_prompt=self.system_prompt,
+                prompt=user_prompt,
+                image_path=image_path,
+                thinking=True,
+                reasoning_effort=self.reasoning_effort,
+                token_limit=self.token_limit,
+                temperature=self.temperature,
+            )
+            return response
+        except Exception as e:
+            print(f"[ReasoningModule] Vision API failed ({e}), falling back to text-only.")
+            return self._call_text_api(context, custom_prompt)
 
     def _call_text_api(self, context, custom_prompt=None):
         """

@@ -145,3 +145,14 @@ pokemon_status_analysis.txt
 # Claude Code Local Settings
 # ===========================
 .claude/settings.local.json
+.claude/settings.json
+
+# ===========================
+# WSL Virtual Environment
+# ===========================
+.venv-wsl/
+
+# ===========================
+# Temporary Working Directory
+# ===========================
+tmp/
