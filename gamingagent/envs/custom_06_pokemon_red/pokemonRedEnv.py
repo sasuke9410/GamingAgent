@@ -78,9 +78,8 @@ class PokemonRedEnv(Env):
         self.location_tracker_activated = False
         self.last_location = None
         
-        # Initialize emulator if rom_path provided
-        if self.rom_path:
-            self._init_emulator()
+        # Emulator is initialized in reset() to allow the UI (Agent Monitor) to start
+        # before the PyBoy window opens.  Do NOT call _init_emulator() here.
 
     def _init_emulator(self):
         """Initialize the PyBoy emulator"""
@@ -435,11 +434,16 @@ class PokemonRedEnv(Env):
 
         # ── Phase 2: Player name input ──────────────────────────────────────
         # Cursor is at 'ア' (row 0, col 0).  Buffer may have ア×N typed.
-        # Delete all typed characters with B (cursor stays at ア; no-op if buffer empty).
+        # B press removes last typed char; cursor returns to that char's grid position.
+        # Since we only pressed A (never moved cursor), all typed chars are at ア,
+        # so B always returns cursor to ア → cursor stays at (row 0, col 0) after B×7.
         fast_btn("b", 7, wait_frames=30)   # clear up to 7 chars → empty buffer
-        # Navigate to おわり: rightmost entry in row 0 (right × 9 from col 0).
-        # Empty buffer + おわり → game assigns default name (レッド / RED).
-        fast_btn("right", 9, wait_frames=15)
+        # Navigate to おわり from ア (row 0, col 0):
+        #   down × 1 → イ (row 1, col 0)
+        #   right × 8 → おわり (row 1, col 8 — confirmed by prompt example)
+        # Empty buffer + おわり → game assigns default name (レッド).
+        fast_btn("down",  1, wait_frames=15)
+        fast_btn("right", 8, wait_frames=15)
         fast_a(1, wait_frames=120)   # Confirm おわり → default player name
         self.tick(120)
 
@@ -448,7 +452,8 @@ class PokemonRedEnv(Env):
 
         # ── Phase 4: Rival name input ───────────────────────────────────────
         fast_btn("b", 7, wait_frames=30)   # clear up to 7 chars → empty buffer
-        fast_btn("right", 9, wait_frames=15)
+        fast_btn("down",  1, wait_frames=15)
+        fast_btn("right", 8, wait_frames=15)
         fast_a(1, wait_frames=120)   # Confirm おわり → default rival name
         self.tick(120)
 

@@ -500,15 +500,11 @@ def create_environment(game_name_arg: str,
 
 def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args: argparse.Namespace):
     """Run a single episode of the game."""
-    # Pass episode_id to env.reset
-    agent_observation, last_info = game_env.reset(max_memory=args.max_memory, seed=args.seed, episode_id=episode_id)
-    if args.seed is not None: args.seed += 1 # Increment seed for next potential run
-
     total_reward_for_episode = 0.0
     total_perf_score_for_episode = 0.0
     final_step_num = 0
 
-    # ── Log window ────────────────────────────────────────────────────────────
+    # ── Log window (start BEFORE game reset so monitor is visible first) ─────
     log_win = None
     episode_start_wall = time.time()
     if LogWindow is not None:
@@ -523,11 +519,14 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
             print(f"[LogWindow] Failed to start: {_lw_err}")
             log_win = None
 
-    # Fix 1: Wait for both game window and monitor window to be fully visible
-    # before starting the first action step. Use a simple sleep; PyBoy already
-    # rendered during initialize() so no extra tick needed here.
-    print("[Runner] Waiting for windows to initialize...")
-    time.sleep(3.0)
+    # Wait for Agent Monitor to fully render before opening the game window.
+    print("[Runner] Waiting for Agent Monitor to initialize...")
+    time.sleep(2.0)
+
+    # Reset the environment (opens PyBoy window and runs intro skip).
+    agent_observation, last_info = game_env.reset(max_memory=args.max_memory, seed=args.seed, episode_id=episode_id)
+    if args.seed is not None: args.seed += 1 # Increment seed for next potential run
+
     print("[Runner] Windows ready. Starting game loop.")
 
     # Helper: pump SDL2 events via PyBoy tick without advancing game logic.

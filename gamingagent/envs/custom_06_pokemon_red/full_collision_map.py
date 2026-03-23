@@ -302,8 +302,8 @@ class LocationCollisionMap:
                 "Numbers - How many tiles away this tile is to reach",
                 "SS - Sprite",
                 "PP - Player Character",
-                "xx - AVOID GOING HERE - Already Explored",
-                "uu - CHECK HERE: Blank = Unknown/Unvisited"
+                "xx - Already Explored (avoid)",
+                "uu - Unknown/Unvisited tile"
             ])
         else:
             lines_human.extend([
