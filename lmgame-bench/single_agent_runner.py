@@ -524,12 +524,20 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
             log_win = None
 
     # Fix 1: Wait for both game window and monitor window to be fully visible
-    # before starting the first action step.
+    # before starting the first action step. Use a simple sleep; PyBoy already
+    # rendered during initialize() so no extra tick needed here.
     print("[Runner] Waiting for windows to initialize...")
-    for _ in range(30):  # 3 seconds: pump game events while waiting
-        game_env.render()
-        time.sleep(0.1)
+    time.sleep(3.0)
     print("[Runner] Windows ready. Starting game loop.")
+
+    # Helper: pump SDL2 events via PyBoy tick without advancing game logic.
+    # Called from the main thread during LLM inference to keep the window alive.
+    def _pump_game_events():
+        if hasattr(game_env, 'tick'):
+            try:
+                game_env.tick(1)  # one emulator frame = keeps SDL2 alive
+            except Exception:
+                pass
 
     for step_num in range(args.max_steps_per_episode):
         final_step_num = step_num + 1
@@ -543,8 +551,8 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
         _action_thread = threading.Thread(target=_get_action_worker, daemon=True)
         _action_thread.start()
         while _action_thread.is_alive():
-            game_env.render()
-            _action_thread.join(timeout=0.05)
+            _pump_game_events()
+            _action_thread.join(timeout=0.5)
         action_dict, processed_agent_observation = _action_result['value']
         end_time = time.time()
         time_taken_s = end_time - start_time
@@ -579,8 +587,19 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
             action_str_agent = "None" # Default to "None" string if no valid action
             if action_str:
                 action_str_agent = str(action_str).strip().lower()
-            
+
             thought_process = action_dict.get("thought", "") if action_dict else "No thought process due to API failure."
+
+            # Fix 3 (opening override): For Pokemon Red, if coordinates are (0,0),
+            # the game is still in the opening/title sequence. Force 'a' regardless
+            # of what the LLM decided, because the perception model cannot reliably
+            # detect the cutscene state and often misidentifies it as overworld.
+            if args.game_name == "pokemon_red":
+                _coords = last_info.get("coordinates") if last_info else None
+                if _coords is not None and _coords[0] == 0 and _coords[1] == 0:
+                    if action_str_agent not in ("(a, 1)", "a"):
+                        print(f"[Runner] Opening override: coord=(0,0), forcing (a,1) instead of '{action_str_agent}'")
+                        action_str_agent = "(a, 1)"
 
             # --- MODIFIED: Extract raw LLM output to pass to env.step ---
             raw_llm_output_for_env = None
