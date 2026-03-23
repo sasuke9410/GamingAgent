@@ -590,15 +590,14 @@ def run_game_episode(agent: BaseAgent, game_env: gym.Env, episode_id: int, args:
 
             thought_process = action_dict.get("thought", "") if action_dict else "No thought process due to API failure."
 
-            # Fix 3 (opening override): For Pokemon Red, if coordinates are (0,0),
-            # the game is still in the opening/title sequence. Force 'a' regardless
-            # of what the LLM decided, because the perception model cannot reliably
-            # detect the cutscene state and often misidentifies it as overworld.
-            if args.game_name == "pokemon_red":
+            # Fix 3 (opening safety net): _skip_intro_sequence() now handles the
+            # full opening at max speed. This override catches edge cases where
+            # opening dialog leaks into the first few agent steps.
+            if args.game_name == "pokemon_red" and final_step_num <= 10:
                 _coords = last_info.get("coordinates") if last_info else None
                 if _coords is not None and _coords[0] == 0 and _coords[1] == 0:
                     if action_str_agent not in ("(a, 1)", "a"):
-                        print(f"[Runner] Opening override: coord=(0,0), forcing (a,1) instead of '{action_str_agent}'")
+                        print(f"[Runner] Opening safety: coord=(0,0) at step {final_step_num}, forcing (a,1)")
                         action_str_agent = "(a, 1)"
 
             # --- MODIFIED: Extract raw LLM output to pass to env.step ---
