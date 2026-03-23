@@ -398,20 +398,61 @@ class PokemonRedEnv(Env):
         self._skip_intro_sequence()
 
     def _skip_intro_sequence(self):
-        """Skip the game intro sequence by pressing start/A buttons"""
-        print("[PokemonRedEnv] Skipping intro sequence...")
-        
-        # Wait a bit for the game to fully load
+        """Skip the full game intro: title, Oak's speech, name inputs, and all dialog.
+
+        Runs at max emulation speed so this completes in real-time seconds.
+        After this method returns, the player should be in their starting room
+        with real coordinates (non-zero).
+        """
+        print("[PokemonRedEnv] Skipping full intro sequence at max speed...")
+        self.pyboy.set_emulation_speed(0)
+
+        def fast_a(n, wait_frames=20):
+            """Press A `n` times quickly."""
+            for _ in range(n):
+                self.pyboy.button_press("a")
+                self.tick(8)
+                self.pyboy.button_release("a")
+                self.tick(wait_frames)
+
+        def fast_btn(btn, n, wait_frames=10):
+            """Press a directional button `n` times quickly."""
+            for _ in range(n):
+                self.pyboy.button_press(btn)
+                self.tick(6)
+                self.pyboy.button_release(btn)
+                self.tick(wait_frames)
+
+        # ── Phase 1: Title screen → NEW GAME → Oak's full intro speech ─────
+        # Enough presses to clear: title (2) + NEW GAME (2) + all Oak dialog (~15)
+        # Extra presses while on name-input just fill 'ア' up to 7-char limit then do nothing.
         self.tick(60)
-        
-        # Press start button 3 times to skip the intro screens
-        for i in range(3):
-            print(f"[PokemonRedEnv] Pressing start button {i+1}/3")
-            self.press_buttons(["a"], wait=True)
-            # Add extra wait time between presses
-            self.tick(60)
-        
-        print("[PokemonRedEnv] Intro sequence skipped.")
+        fast_a(35, wait_frames=25)
+
+        # ── Phase 2: Player name input ──────────────────────────────────────
+        # Cursor is at 'ア' (top-left). Buffer may already be full with 'ア'×7.
+        # Navigate to おわり (bottom-right of kana grid):
+        #   down × 9 → bottom row,  right × 9 → rightmost column = おわり
+        fast_btn("down",  9, wait_frames=8)
+        fast_btn("right", 9, wait_frames=8)
+        fast_a(1, wait_frames=30)   # Confirm おわり
+        self.tick(60)
+
+        # ── Phase 3: More Oak dialog after player name (rival intro) ────────
+        fast_a(20, wait_frames=25)
+
+        # ── Phase 4: Rival name input ───────────────────────────────────────
+        fast_btn("down",  9, wait_frames=8)
+        fast_btn("right", 9, wait_frames=8)
+        fast_a(1, wait_frames=30)   # Confirm おわり
+        self.tick(60)
+
+        # ── Phase 5: Final dialog, player spawns in room ────────────────────
+        fast_a(15, wait_frames=25)
+        self.tick(120)
+
+        self.pyboy.set_emulation_speed(1)
+        print("[PokemonRedEnv] Full intro sequence skipped.")
 
 
     def get_screenshot(self):
